@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROTARY-CAM 4D PRO v3.5.1 - Mágica 3D Studio</title>
+    <style>
+        :root {
+            --bg-dark: #121214;
+            --panel-bg: #1e1e24;
+            --accent: #00e676;
+            --danger: #ff1744;
+            --text: #e1e1e6;
+            --border: #323238;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: var(--bg-dark); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+        
+        #viewport-container { flex: 1; position: relative; background: radial-gradient(circle at center, #2a2a35 0%, #121214 100%); }
+        #canvas3d { width: 100%; height: 100%; display: block; }
+        
+        #sidebar { width: 360px; background: var(--panel-bg); border-left: 1px solid var(--border); display: flex; flex-direction: column; z-index: 10; }
+        .header { padding: 15px; border-bottom: 1px solid var(--border); background: #18181b; }
+        .header h1 { font-size: 1.1rem; color: var(--accent); letter-spacing: 1px; }
+        .header span { font-size: 0.75rem; color: #8d8d99; }
+
+        .panel-body { padding: 15px; flex: 1; overflow-y: auto; }
+        .group { margin-bottom: 20px; background: #282830; padding: 12px; border-radius: 6px; border: 1px solid var(--border); }
+        .group-title { font-size: 0.85rem; text-transform: uppercase; color: #a8a8b3; margin-bottom: 10px; font-weight: bold; }
+
+        label { display: block; font-size: 0.8rem; margin-bottom: 4px; color: #c4c4cc; }
+        input, select { width: 100%; padding: 8px; background: #121214; border: 1px solid var(--border); border-radius: 4px; color: var(--text); margin-bottom: 10px; font-size: 0.85rem; }
+        input:focus { border-color: var(--accent); outline: none; }
+
+        .alert-box { display: none; background: rgba(255, 23, 68, 0.15); border: 1px solid var(--danger); color: var(--danger); padding: 10px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-bottom: 15px; }
+
+        .btn-primary { width: 100%; padding: 12px; background: var(--accent); color: #000; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; transition: 0.2s; }
+        .btn-primary:hover { background: #00b359; }
+
+        #fps-counter { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; color: var(--accent); }
+    </style>
+    <!-- Three.js Otimizado via CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <div id="viewport-container">
+        <div id="fps-counter">⚡ Performance: 60 FPS (Otimizado)</div>
+        <canvas id="canvas3d"></canvas>
+    </div>
+
+    <div id="sidebar">
+        <div class="header">
+            <h1>ROTARY-CAM 4D PRO</h1>
+            <span>v3.5.1 • Mágica 3D Studio</span>
+        </div>
+
+        <div class="panel-body">
+            <div id="collision-alert" class="alert-box">
+                ⚠️ ALERTA DE COLISÃO: Diâmetro de <span id="diam-val">0</span>mm excede o limite físico da mesa (Máx 130mm / Centro 65mm)!
+            </div>
+
+            <div class="group">
+                <div class="group-title">Geometria do Tarugo</div>
+                <label>Diâmetro Bruto (mm):</label>
+                <input type="number" id="diameter" value="80" step="1" oninput="updateStock()">
+
+                <label>Comprimento Z (mm):</label>
+                <input type="number" id="length" value="300" step="5" oninput="updateStock()">
+            </div>
+
+            <div class="group">
+                <div class="group-title">Parâmetros de Corte & Segurança</div>
+                <label>Altura Segura Z (mm):</label>
+                <input type="number" id="safeZ" value="75">
+
+                <label>Inversão Eixo A:</label>
+                <select id="invertA">
+                    <option value="normal">Normal (+A Direta)</option>
+                    <option value="inverted">Invertido (-A Inversa)</option>
+                </select>
+            </div>
+
+            <button class="btn-primary" onclick="triggerRender()">🔄 Recalcular / Resetar Vista</button>
+        </div>
+    </div>
+
+    <script>
+        // Engine 3D Otimizada (Render Sob Demanda)
+        let scene, camera, renderer, controls, cylinder;
+        let needsRender = true;
+
+        function init() {
+            const container = document.getElementById('viewport-container');
+            
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 2000);
+            camera.position.set(250, 200, 300);
+
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas3d'), antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.addEventListener('change', () => { needsRender = true; });
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(100, 200, 100);
+            scene.add(dirLight);
+
+            createStockMesh(80, 300);
+
+            window.addEventListener('resize', onWindowResize);
+            animate();
+        }
+
+        function createStockMesh(dia, len) {
+            if (cylinder) {
+                scene.remove(cylinder);
+                cylinder.geometry.dispose();
+                cylinder.material.dispose();
+            }
+            const geometry = new THREE.CylinderGeometry(dia / 2, dia / 2, len, 64);
+            const material = new THREE.MeshStandardMaterial({ color: 0xd4a373, roughness: 0.4 });
+            cylinder = new THREE.Mesh(geometry, material);
+            cylinder.rotation.z = Math.PI / 2;
+            scene.add(cylinder);
+            needsRender = true;
+        }
+
+        function updateStock() {
+            const dia = parseFloat(document.getElementById('diameter').value) || 0;
+            const len = parseFloat(document.getElementById('length').value) || 0;
+            
+            const alertBox = document.getElementById('collision-alert');
+            if (dia > 130) {
+                document.getElementById('diam-val').innerText = dia;
+                alertBox.style.display = 'block';
+            } else {
+                alertBox.style.display = 'none';
+            }
+
+            createStockMesh(dia, len);
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('viewport-container');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            needsRender = true;
+        }
+
+        function triggerRender() {
+            needsRender = true;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (controls.update() || needsRender) {
+                renderer.render(scene, camera);
+                needsRender = false;
+            }
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
