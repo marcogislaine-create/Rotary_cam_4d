@@ -1,0 +1,2360 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROTARY-CAM 4D PRO v3.5.0 | Edição Industrial Tecmaf, RnR EcoMotion & Aspire</title>
+
+    <!-- Three.js, OrbitControls e STLLoader via CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+
+    <style>
+        :root {
+            --bg-body: #05070a;
+            --panel-bg: #0b0f15;
+            --panel-sub: #10151f;
+            --panel-border: #182230;
+            --accent-cyan: #00e5ff;
+            --accent-amber: #ff9100;
+            --accent-green: #00e676;
+            --accent-red: #ff334b;
+            --accent-purple: #b388ff;
+            --text-main: #e2e8f0;
+            --text-muted: #6f7f94;
+            --input-bg: #06080c;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            height: 38px;
+            background: #080b10;
+            border-bottom: 1px solid var(--panel-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            z-index: 30;
+        }
+
+        .brand-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .brand-title {
+            font-size: 0.92rem;
+            font-weight: 900;
+            letter-spacing: 1.1px;
+            color: var(--accent-cyan);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .brand-badge {
+            font-size: 0.6rem;
+            font-weight: 800;
+            padding: 2px 5px;
+            border-radius: 3px;
+            text-transform: uppercase;
+        }
+
+        .badge-cyan { background: rgba(0, 229, 255, 0.12); color: var(--accent-cyan); border: 1px solid var(--accent-cyan); }
+        .badge-purple { background: rgba(179, 136, 255, 0.15); color: var(--accent-purple); border: 1px solid var(--accent-purple); }
+        .badge-amber { background: rgba(255, 145, 0, 0.15); color: var(--accent-amber); border: 1px solid var(--accent-amber); }
+        .badge-green { background: rgba(0, 230, 118, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); }
+
+        .brand-status {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+        }
+
+        .brand-status span {
+            color: var(--accent-green);
+            font-weight: 700;
+        }
+
+        .workspace {
+            display: grid;
+            grid-template-columns: 345px 1fr 355px;
+            height: calc(100vh - 38px);
+            width: 100vw;
+            position: relative;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            z-index: 10;
+        }
+
+        .panel-left { border-right: 1px solid var(--panel-border); }
+        .panel-right { border-left: 1px solid var(--panel-border); }
+
+        .tab-bar {
+            display: flex;
+            background: #07090e;
+            border-bottom: 1px solid var(--panel-border);
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 8px 2px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            background: transparent;
+            color: var(--text-muted);
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .tab-btn:hover { color: var(--text-main); }
+        .tab-btn.active { color: var(--accent-cyan); border-bottom-color: var(--accent-cyan); background: rgba(0, 229, 255, 0.05); }
+        .tab-btn.active-amber { color: var(--accent-amber); border-bottom-color: var(--accent-amber); background: rgba(255, 145, 0, 0.05); }
+        .tab-btn.active-green { color: var(--accent-green); border-bottom-color: var(--accent-green); background: rgba(0, 230, 118, 0.05); }
+        .tab-btn.active-purple { color: var(--accent-purple); border-bottom-color: var(--accent-purple); background: rgba(179, 136, 255, 0.05); }
+
+        .panel-content {
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            height: 100%;
+        }
+
+        .card {
+            background: var(--panel-sub);
+            border: 1px solid var(--panel-border);
+            border-radius: 4px;
+            padding: 6px 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .card-header {
+            font-size: 0.69rem;
+            font-weight: 800;
+            color: var(--accent-amber);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-header-purple { color: var(--accent-purple); }
+        .card-header-cyan { color: var(--accent-cyan); }
+        .card-header-amber { color: var(--accent-amber); }
+        .card-header-green { color: var(--accent-green); }
+
+        .row-ctrl {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.72rem;
+        }
+
+        .row-ctrl label {
+            color: var(--text-main);
+            flex: 1;
+        }
+
+        .row-ctrl input, .row-ctrl select {
+            width: 95px;
+            height: 22px;
+            padding: 1px 5px;
+            background: var(--input-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 3px;
+            color: var(--accent-cyan);
+            font-size: 0.74rem;
+            font-family: 'Consolas', monospace;
+            text-align: right;
+            outline: none;
+        }
+
+        .row-ctrl select { text-align: left; width: 155px; }
+        .row-ctrl input:focus, .row-ctrl select:focus { border-color: var(--accent-cyan); box-shadow: 0 0 5px rgba(0, 229, 255, 0.25); }
+
+        .dual-box {
+            display: flex;
+            gap: 4px;
+            width: 100%;
+        }
+
+        .unit-input {
+            display: flex;
+            align-items: center;
+            background: var(--input-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 3px;
+            flex: 1;
+            padding-right: 4px;
+            height: 22px;
+        }
+
+        .unit-input input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            padding: 1px 4px;
+            text-align: right;
+            color: var(--accent-cyan);
+            font-family: 'Consolas', monospace;
+            font-size: 0.74rem;
+            outline: none;
+        }
+
+        .unit-input span {
+            color: var(--text-muted);
+            font-size: 0.65rem;
+            font-family: 'Consolas', monospace;
+            font-weight: 700;
+        }
+
+        .upload-area {
+            border: 1px dashed var(--panel-border);
+            border-radius: 4px;
+            padding: 8px 6px;
+            text-align: center;
+            cursor: pointer;
+            background: rgba(6, 8, 12, 0.6);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            transition: all 0.2s;
+        }
+
+        .upload-area:hover {
+            border-color: var(--accent-purple);
+            background: rgba(179, 136, 255, 0.05);
+        }
+
+        .upload-area span { font-size: 0.72rem; font-weight: 700; color: var(--text-main); }
+        .upload-area small { font-size: 0.63rem; color: var(--text-muted); }
+
+        .info-box {
+            background: #06080c;
+            border: 1px solid #141b24;
+            border-radius: 3px;
+            padding: 5px 7px;
+            font-size: 0.67rem;
+            color: var(--text-muted);
+            line-height: 1.35;
+            font-family: 'Consolas', monospace;
+        }
+
+        .info-box b { color: var(--accent-cyan); }
+
+        .metrics-banner {
+            background: #090e16;
+            border: 1px solid #18283d;
+            border-radius: 4px;
+            padding: 5px 7px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.68rem;
+        }
+
+        .metrics-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .metrics-row span { color: var(--text-muted); }
+        .metrics-row b { color: var(--accent-green); }
+
+        .warning-box {
+            background: rgba(255, 51, 75, 0.12);
+            border: 1px solid var(--accent-red);
+            color: #ff8595;
+            border-radius: 3px;
+            padding: 5px 7px;
+            font-size: 0.68rem;
+            line-height: 1.35;
+            display: none;
+        }
+
+        .btn {
+            background: var(--accent-cyan);
+            color: #000;
+            border: none;
+            border-radius: 3px;
+            padding: 5px 8px;
+            font-weight: 800;
+            font-size: 0.7rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            transition: all 0.2s;
+        }
+
+        .btn:hover { filter: brightness(1.15); box-shadow: 0 0 8px rgba(0, 229, 255, 0.35); }
+        .btn-purple { background: var(--accent-purple); color: #000; }
+        .btn-purple:hover { box-shadow: 0 0 8px rgba(179, 136, 255, 0.4); }
+        .btn-amber { background: var(--accent-amber); color: #000; }
+        .btn-green { background: var(--accent-green); color: #000; }
+        .btn-sm { padding: 2px 5px; font-size: 0.64rem; background: #141b24; color: var(--text-main); border: 1px solid var(--panel-border); border-radius: 2px; cursor: pointer; }
+        .btn-sm:hover { background: var(--panel-border); color: var(--accent-cyan); }
+
+        .progress-bar-wrap {
+            height: 4px;
+            width: 100%;
+            background: var(--input-bg);
+            border-radius: 2px;
+            overflow: hidden;
+            display: none;
+            border: 1px solid var(--panel-border);
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+            transition: width 0.05s ease;
+        }
+
+        .viewport-box {
+            position: relative;
+            background: #040608;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #canvas3d {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .hud-top {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            z-index: 5;
+        }
+
+        .hud-card {
+            background: rgba(8, 11, 16, 0.88);
+            backdrop-filter: blur(4px);
+            border: 1px solid var(--panel-border);
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.68rem;
+            color: var(--text-muted);
+        }
+
+        .hud-card span { color: var(--accent-cyan); font-weight: 700; }
+
+        .hud-bottom {
+            position: absolute;
+            bottom: 8px;
+            left: 8px;
+            right: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            pointer-events: none;
+            gap: 6px;
+            z-index: 5;
+        }
+
+        .hud-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            pointer-events: auto;
+            background: rgba(8, 11, 16, 0.9);
+            padding: 4px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--panel-border);
+            backdrop-filter: blur(4px);
+        }
+
+        .btn-tool {
+            background: #10151f;
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            padding: 3px 6px;
+            font-size: 0.67rem;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+
+        .btn-tool:hover { background: var(--accent-cyan); color: #000; }
+
+        .timeline-slider {
+            width: 125px;
+            accent-color: var(--accent-cyan);
+            cursor: pointer;
+        }
+
+        .gcode-viewer {
+            background: var(--input-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 3px;
+            padding: 5px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.67rem;
+            color: #8be9fd;
+            flex: 1;
+            min-height: 95px;
+            max-height: 135px;
+            overflow-y: scroll;
+            white-space: pre;
+            line-height: 1.35;
+            user-select: text;
+        }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: #06080c; }
+        ::-webkit-scrollbar-thumb { background: #161e2b; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-cyan); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand-box">
+            <div class="brand-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <circle cx="12" cy="12" r="9"/>
+                    <path d="M12 3v18M3 12h18"/>
+                </svg>
+                ROTARY-CAM 4D PRO <span style="font-size:0.7rem; color:var(--text-muted);">v3.5.0</span>
+            </div>
+            <span class="brand-badge badge-cyan">ASPIRE GADGETS</span>
+            <span class="brand-badge badge-amber">TECMAF TMA.4EX.100</span>
+            <span class="brand-badge badge-green">RNR USB INDUSTRIAL</span>
+        </div>
+        <div class="brand-status">
+            Spindle: <span>Tecmaf 0.8kW (24k RPM) // CFW300 // H=65mm</span>
+        </div>
+    </header>
+
+    <div class="workspace">
+
+        <!-- PAINEL ESQUERDO: GADGETS PARAMÉTRICOS ASPIRE & CAM STL -->
+        <aside class="panel panel-left">
+            <div class="tab-bar">
+                <button class="tab-btn active" id="tab-round" onclick="setMode('round')">🌀 Bloco</button>
+                <button class="tab-btn" id="tab-flute" onclick="setMode('flute')">🏛️ Canais</button>
+                <button class="tab-btn" id="tab-spiral" onclick="setMode('spiral')">🌪️ Espirais</button>
+                <button class="tab-btn" id="tab-cyl" onclick="setMode('cyl')">🌀 Cilindro</button>
+                <button class="tab-btn" id="tab-stl" onclick="setMode('stl')">🗿 Relevo STL</button>
+            </div>
+
+            <div class="panel-content">
+
+                <!-- 1. GADGET ARREDONDAR BLOCO -->
+                <div id="sec-round" style="display:flex; flex-direction:column; gap:5px;">
+                    <div class="card">
+                        <div class="card-header card-header-cyan">
+                            <span>🌀 Arredondar Bloco (Rounding Gadget)</span>
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Formato Bruto:</label>
+                            <select id="round-stock-shape" onchange="onStockShapeChange()">
+                                <option value="square" selected>Bloco Quadrado (Lado mm)</option>
+                                <option value="cylinder">Tarugo Cilíndrico (Ø mm)</option>
+                            </select>
+                        </div>
+                        <div class="row-ctrl">
+                            <label id="round-size-label">Lado do Bloco (mm):</label>
+                            <input type="number" id="round-raw-size" value="70.0" step="1.0" onchange="buildMachine3D()">
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Diâmetro Final (mm):</label>
+                            <input type="number" id="round-target-dia" value="65.0" step="1.0">
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Método de Usinagem:</label>
+                            <select id="round-method">
+                                <option value="radial" selected>Radial Helicoidal (Espirais)</option>
+                                <option value="raster">Raster Longitudinal (X-A)</option>
+                                <option value="optimized">Optimized Raster (Quinas Pré)</option>
+                            </select>
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Passo Radial Ap (mm):</label>
+                            <input type="number" id="round-ap" value="2.0" step="0.5">
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Sobramargem (mm):</label>
+                            <input type="number" id="round-allowance" value="0.0" step="0.1">
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Início X (mm):</label>
+                            <input type="number" id="round-start-x" value="10.0" step="1.0">
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Comprimento Útil (mm):</label>
+                            <input type="number" id="round-length" value="180.0" step="5.0">
+                        </div>
+                        <button class="btn" style="margin-top:2px;" onclick="generateRoundingToolpath()">Calcular Arredondamento 4D</button>
+                    </div>
+                </div>
+
+                <!-- 2. GADGET CANAIS LONGITUDINAIS -->
+                <div id="sec-flute" style="display:none; flex-direction:column; gap:5px;">
+                    <div class="card">
+                        <div class="card-header card-header-amber">
+                            <span>🏛️ Canais Longitudinais (Fluting)</span>
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Número de Canais:</label>
+                            <input type="number" id="flute-count" value="8" step="1" min="2" max="64">
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Profundidade Canal (mm):</label>
+                            <input type="number" id="flute-depth" value="3.5" step="0.5" min="0.1">
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Offset Início (Margem Esquerda mm):</label>
+                            <input type="number" id="flute-offset-start" value="25.0" step="1.0">
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Offset Fim (Margem Direita mm):</label>
+                            <input type="number" id="flute-offset-end" value="25.0" step="1.0">
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Rampas de Entrada/Saída:</label>
+                            <select id="flute-ramp-type">
+                                <option value="both" selected>Rampa nas Duas Pontas</option>
+                                <option value="start">Rampa Apenas no Início</option>
+                                <option value="straight">Reto / Mergulho Direto</option>
+                            </select>
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Comprimento da Rampa (mm):</label>
+                            <input type="number" id="flute-ramp-len" value="15.0" step="1.0">
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Anéis Rebaixo (Coves Start/End):</label>
+                            <select id="flute-coves">
+                                <option value="none" selected>Nenhum Anel</option>
+                                <option value="both">Anel 360° em Ambas as Pontas</option>
+                                <option value="start">Anel Apenas no Início</option>
+                                <option value="end">Anel Apenas no Fim</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-amber" style="margin-top:2px;" onclick="generateFlutingToolpath()">Calcular Canais 4D</button>
+                    </div>
+                </div>
+
+                <!-- 3. GADGET ESPIRAIS & CORDÕES SALOMÔNICOS -->
+                <div id="sec-spiral" style="display:none; flex-direction:column; gap:5px;">
+                    <div class="card">
+                        <div class="card-header card-header-green">
+                            <span>🌪️ Espirais & Cordões Salomônicos</span>
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Entradas / Pernas (Starts):</label>
+                            <select id="spiral-starts">
+                                <option value="1">1 Perna (Espiral Simples)</option>
+                                <option value="2" selected>2 Pernas (Cordão Duplo)</option>
+                                <option value="3">3 Pernas (Salomônico Triplo)</option>
+                                <option value="4">4 Pernas (Torção Quádrupla)</option>
+                            </select>
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Passo da Espiral (Pitch mm/360°):</label>
+                            <input type="number" id="spiral-pitch" value="80.0" step="5.0" min="5.0">
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Sentido da Torção:</label>
+                            <select id="spiral-dir">
+                                <option value="right" selected>Torção Direita (Horário)</option>
+                                <option value="left">Torção Esquerda (Anti-horário)</option>
+                            </select>
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Profundidade do Cordão (mm):</label>
+                            <input type="number" id="spiral-depth" value="4.0" step="0.5" min="0.2">
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Passo Radial Ap (mm):</label>
+                            <input type="number" id="spiral-ap" value="2.0" step="0.5">
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Margem Inicial (mm):</label>
+                            <input type="number" id="spiral-margin-start" value="20.0" step="1.0">
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Margem Final (mm):</label>
+                            <input type="number" id="spiral-margin-end" value="20.0" step="1.0">
+                        </div>
+                        <button class="btn btn-green" style="margin-top:2px;" onclick="generateSpiralToolpath()">Calcular Cordões Salomônicos</button>
+                    </div>
+                </div>
+
+                <!-- 4. CILINDRAMENTO HELICOIDAL 4D -->
+                <div id="sec-cyl" style="display:none; flex-direction:column; gap:5px;">
+                    <div class="card">
+                        <div class="card-header">
+                            <span>🌀 Cilindramento Helicoidal 4D</span>
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Diâmetro Final (mm):</label>
+                            <input type="number" id="cyl-target-dia" value="70.0" step="1.0">
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Início Corte X (mm):</label>
+                            <input type="number" id="cyl-start-x" value="10.0" step="1.0">
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Comprimento Útil (mm):</label>
+                            <input type="number" id="cyl-length" value="180.0" step="5.0">
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Passo Radial Ap (mm):</label>
+                            <input type="number" id="cyl-ap" value="2.0" step="0.5">
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Conicidade / Delta Z (mm):</label>
+                            <input type="number" id="cyl-taper-delta" value="0.0" step="0.5">
+                        </div>
+                        <button class="btn" style="margin-top:2px;" onclick="generateCylToolpath()">Calcular Desbaste 4D</button>
+                    </div>
+                </div>
+
+                <!-- 5. RELEVO STL 3D RAYCASTING -->
+                <div id="sec-stl" style="display:none; flex-direction:column; gap:5px;">
+                    <div class="card">
+                        <div class="card-header card-header-purple">
+                            <span>📦 Importar Malha 3D (.STL)</span>
+                        </div>
+                        <input type="file" id="stl-file-input" accept=".stl" style="display:none;">
+                        <div class="upload-area" onclick="document.getElementById('stl-file-input').click()">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--accent-purple);">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="17 8 12 3 7 8"/>
+                                <line x1="12" y1="3" x2="12" y2="15"/>
+                            </svg>
+                            <span id="stl-name-label">Carregar Arquivo .STL</span>
+                            <small id="stl-info-label">Binário ou ASCII</small>
+                        </div>
+                    </div>
+
+                    <div class="card" id="stl-config-card" style="opacity:0.5; pointer-events:none;">
+                        <div class="card-header card-header-purple">
+                            <span>📐 Alinhamento & Escala 4D</span>
+                            <div style="display:flex; gap:3px;">
+                                <button class="btn-sm" onclick="autoFitSTL()" title="Ajusta o STL ao tamanho atual do tarugo">Auto Ajustar</button>
+                                <button class="btn-sm" style="color:var(--accent-purple); font-weight:bold;" onclick="autoFitStockToSTL()" title="Redimensiona o tarugo com base nas medidas reais do STL + 10mm">Ajustar Tarugo ao STL</button>
+                            </div>
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Comprimento X (mm):</label>
+                            <input type="number" id="stl-target-length" value="160.0" step="1.0">
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Posição Inicial X (mm):</label>
+                            <input type="number" id="stl-pos-x" value="20.0" step="1.0">
+                        </div>
+                        <div class="row-ctrl">
+                            <label>Núcleo Seguro / Fundo (mm):</label>
+                            <input type="number" id="stl-core-dia" value="14.0" step="1.0">
+                        </div>
+
+                        <div style="font-size:0.65rem; color:var(--text-muted); font-weight:700;">ROTAÇÃO DE ALINHAMENTO (°):</div>
+                        <div class="dual-box">
+                            <div class="unit-input"><input type="number" id="stl-rot-x" value="0" step="15"><span>X°</span></div>
+                            <div class="unit-input"><input type="number" id="stl-rot-y" value="0" step="15"><span>Y°</span></div>
+                            <div class="unit-input"><input type="number" id="stl-rot-z" value="0" step="15"><span>Z°</span></div>
+                        </div>
+
+                        <div class="info-box" id="stl-box-feedback">Carregue um STL para obter métricas.</div>
+
+                        <div class="row-ctrl">
+                            <label>Resolução Angular A (°/passo):</label>
+                            <input type="number" id="stl-angle-step" value="4.0" step="0.5" min="0.5" max="30.0">
+                        </div>
+
+                        <div class="progress-bar-wrap" id="stl-progress-wrap">
+                            <div class="progress-bar-fill" id="stl-progress-fill"></div>
+                        </div>
+
+                        <button class="btn btn-purple" id="btn-calc-stl" style="margin-top:2px;" onclick="generateSTLToolpath()">Calcular Relevo 4D Simultâneo</button>
+                    </div>
+                </div>
+
+                <!-- ESTRATÉGIA CAM -->
+                <div class="card">
+                    <div class="card-header card-header-green">
+                        <span>🎯 Estratégia de Usinagem</span>
+                    </div>
+                    <div class="row-ctrl">
+                        <label>Modo de Percurso:</label>
+                        <select id="cam-strategy">
+                            <option value="finish" selected>Acabamento de Precisão (0.0mm)</option>
+                            <option value="rough">Desbaste Rápido (+0.5mm Sobramargem)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- FERRAMENTA -->
+                <div class="card">
+                    <div class="card-header">
+                        <span>🛠️ Ferramenta & Passo (Aspire)</span>
+                    </div>
+                    <div class="row-ctrl">
+                        <label>Tipo de Fresa:</label>
+                        <select id="tool-type" onchange="onToolTypeChanged()">
+                            <option value="tapered" selected>Cônica Esférica (Tapered R0.25xD6x20x50L)</option>
+                            <option value="ball">Esférica (Ball Nose)</option>
+                            <option value="flat">Reta (Flat End Mill)</option>
+                        </select>
+                    </div>
+                    <div class="row-ctrl">
+                        <label>Diâmetro Haste D (mm):</label>
+                        <input type="number" id="tool-diam" value="6.0" step="0.5" min="0.2">
+                    </div>
+                    <div class="row-ctrl">
+                        <label>Passo Lateral (Stepover):</label>
+                        <div class="dual-box" style="width:140px;">
+                            <div class="unit-input">
+                                <input type="number" id="tool-pitch-mm" value="0.10" step="0.05" min="0.01">
+                                <span>mm</span>
+                            </div>
+                            <div class="unit-input">
+                                <input type="number" id="tool-pitch-pct" value="1.7" step="0.5" min="0.1">
+                                <span>%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VELOCIDADES TECMAF -->
+                <div class="card">
+                    <div class="card-header">
+                        <span>⚡ Spindle & Avanços (Tecmaf 0.8kW)</span>
+                    </div>
+                    <div class="row-ctrl">
+                        <label>Avanço Corte (mm/min):</label>
+                        <input type="number" id="feed-cut" value="1500" step="50">
+                    </div>
+                    <div class="row-ctrl">
+                        <label>Avanço Mergulho (mm/min):</label>
+                        <input type="number" id="feed-plunge" value="400" step="25">
+                    </div>
+                    <div class="row-ctrl">
+                        <label>Spindle (RPM):</label>
+                        <input type="number" id="spindle-rpm" value="24000" step="500">
+                    </div>
+                    <div class="row-ctrl">
+                        <label>Z Segurança (mm):</label>
+                        <input type="number" id="z-safe" value="10.0" step="1.0">
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- VIEWPORT CENTRAL 3D -->
+        <main class="viewport-box" id="viewport-box">
+            <canvas id="canvas3d"></canvas>
+
+            <div class="hud-top">
+                <div class="hud-card">EQUIPAMENTO: <span>Tecmaf TMA.4EX.100 (H=65mm | Placa Direita)</span></div>
+                <div class="hud-card">CINEMÁTICA: <span id="hud-coords">X: 0.00 | Z: 0.00 | A: 0.0°</span></div>
+                <div class="hud-card">STATUS: <span id="hud-status" style="color:var(--accent-green)">Buffer RnR G64 Ativo</span></div>
+            </div>
+
+            <div class="hud-bottom">
+                <div class="hud-group">
+                    <button class="btn-tool" onclick="setCamView('iso')">ISO</button>
+                    <button class="btn-tool" onclick="setCamView('front')">Frente (XZ)</button>
+                    <button class="btn-tool" onclick="setCamView('top')">Topo (XY)</button>
+                    <button class="btn-tool" onclick="toggleWireframe()">Wireframe</button>
+                    <button class="btn-tool" id="btn-toggle-toolpath" style="color:var(--accent-cyan);" onclick="toggleToolpathVisibility()">👁️ Percurso On/Off</button>
+                    <button class="btn-tool" style="color:var(--accent-amber);" onclick="resetStockMesh()">↺ Reset Tarugo</button>
+                </div>
+
+                <div class="hud-group">
+                    <button class="btn-tool" id="btn-sim-play" onclick="toggleSimulation()" style="color:var(--accent-cyan);">▶ Simular</button>
+                    <button class="btn-tool" onclick="resetSimulation()">↺ Reset</button>
+                    <input type="range" id="sim-timeline" class="timeline-slider" min="0" max="100" value="0">
+                    <select id="sim-speed" class="btn-tool" style="outline:none;">
+                        <option value="1">1×</option>
+                        <option value="3" selected>3×</option>
+                        <option value="10">10×</option>
+                        <option value="30">30×</option>
+                    </select>
+                </div>
+            </div>
+        </main>
+
+        <!-- PAINEL DIREITO: 4º EIXO, ORIGEM ASPIRE & G-CODE -->
+        <aside class="panel panel-right">
+            <div class="panel-content">
+                <div class="card">
+                    <div class="card-header card-header-cyan">
+                        <span>🪵 Tarugo Bruto (Material)</span>
+                    </div>
+                    <div class="row-ctrl">
+                        <label>Diâmetro Bruto (mm):</label>
+                        <input type="number" id="stock-diameter" value="90.0" step="1.0">
+                    </div>
+                    <div class="row-ctrl">
+                        <label>Comprimento Total (mm):</label>
+                        <input type="number" id="stock-length" value="220.0" step="5.0">
+                    </div>
+                    <div class="warning-box" id="table-collision-warn"></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header card-header-cyan">
+                        <span>📐 Origem & Z Zero (Padrão Aspire 12.5)</span>
+                    </div>
+                    <div class="row-ctrl">
+                        <label>Posição do Z Zero:</label>
+                        <select id="zero-z-mode">
+                            <option value="center" selected>Centro / Eixo do Cilindro (Z0)</option>
+                            <option value="top">Superfície Externa do Tarugo (Z0)</option>
+                        </select>
+                    </div>
+                    <div class="row-ctrl">
+                        <label>Referência do Zero X:</label>
+                        <select id="zero-x-mode">
+                            <option value="chuck" selected>Face da Placa (X0 Chuck)</option>
+                            <option value="center">Centro Útil da Peça (X0 Centro)</option>
+                            <option value="tip">Ponta / Contra-Ponto (X0 Esquerda)</option>
+                        </select>
+                    </div>
+                    <div class="row-ctrl">
+                        <label title="Define se o corte a partir da placa corre em direção negativa (padrão) ou positiva">Polaridade do Eixo X:</label>
+                        <select id="x-polarity">
+                            <option value="neg" selected>Corte em -X (Padrão CNC)</option>
+                            <option value="pos">Corte em +X (Invertido)</option>
+                        </select>
+                    </div>
+                    <div class="row-ctrl">
+                        <label>Letra Eixo Rotativo:</label>
+                        <select id="rotary-axis-letter">
+                            <option value="A" selected>Eixo A (Graus)</option>
+                            <option value="B">Eixo B (Graus)</option>
+                            <option value="C">Eixo C (Graus)</option>
+                        </select>
+                    </div>
+                    <div class="row-ctrl">
+                        <label>Modo de Avanço:</label>
+                        <select id="feed-mode">
+                            <option value="G93" selected>G93 (Tempo Inverso 4D)</option>
+                            <option value="G94">G94 (Convencional mm/min)</option>
+                        </select>
+                    </div>
+                    <div class="row-ctrl" style="margin-top:2px;">
+                        <label title="Espelha a rotação do Eixo A para compatibilidade cinemática">Inverter Sentido (Eixo -A):</label>
+                        <button class="btn-sm" id="btn-toggle-inverta" onclick="toggleInvertA()" style="width:155px; text-align:center;">Normal (+A)</button>
+                    </div>
+                </div>
+
+                <!-- ESTIMADOR DE TEMPO E MÉTRICAS -->
+                <div class="metrics-banner">
+                    <div class="metrics-row">
+                        <span>Tempo Estimado:</span>
+                        <b id="est-time-val">00h 00m 00s</b>
+                    </div>
+                    <div class="metrics-row">
+                        <span>Distância Corte 3D:</span>
+                        <b id="est-dist-val" style="color:var(--accent-cyan);">0.0 mm</b>
+                    </div>
+                    <div class="metrics-row">
+                        <span>Buffer RnR USB:</span>
+                        <b style="color:var(--accent-amber);">Clamped (Fmax 4500)</b>
+                    </div>
+                </div>
+
+                <div class="card" style="flex:1; display:flex; flex-direction:column; min-height:0;">
+                    <div class="card-header card-header-amber">
+                        <span>📄 Pós-Processador Mach3 RnR (.tap)</span>
+                    </div>
+                    <div class="gcode-viewer" id="gcode-text">(Gere o percurso 4D para visualizar o código G-Code)</div>
+                    <div class="dual-box" style="margin-top:4px;">
+                        <button class="btn btn-amber" style="flex:1;" onclick="generateGCode()">Gerar Código 4D</button>
+                        <button class="btn btn-green" style="flex:1;" onclick="downloadTAP()">Salvar .TAP</button>
+                        <button class="btn btn-purple" style="width:40px; padding:0;" title="Baixar Ficha de Trabalho e Setup (.TXT)" onclick="downloadSetupSheet()">📋</button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+    </div>
+
+    <script>
+        /* =========================================================================
+           1. THREE.JS & CENÁRIO MECÂNICO DA BANCADA REAL
+           ========================================================================= */
+        const CENTER_HEIGHT = 65.0;
+        const CHUCK_DIAMETER = 100.0;
+
+        const canvas = document.getElementById('canvas3d');
+        const container = document.getElementById('viewport-box');
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x040608);
+
+        const camera = new THREE.PerspectiveCamera(40, container.clientWidth / container.clientHeight, 0.1, 4000);
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, powerPreference: "high-performance" });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+
+        const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.85);
+        dirLight1.position.set(150, 400, 200);
+        scene.add(dirLight1);
+
+        const dirLight2 = new THREE.DirectionalLight(0x00e5ff, 0.35);
+        dirLight2.position.set(-150, 100, -150);
+        scene.add(dirLight2);
+
+        const chuckLight = new THREE.PointLight(0xffffff, 1.45, 500);
+        scene.add(chuckLight);
+
+        // Mesa da CNC em Y=0
+        const tableMat = new THREE.MeshStandardMaterial({ color: 0x161c26, metalness: 0.8, roughness: 0.35 });
+        const slotMat = new THREE.MeshStandardMaterial({ color: 0x07090e, metalness: 0.9, roughness: 0.5 });
+
+        const tableGeom = new THREE.BoxGeometry(850, 8, 340);
+        tableGeom.translate(140, -4, 0);
+        scene.add(new THREE.Mesh(tableGeom, tableMat));
+
+        for (let sz = -120; sz <= 120; sz += 40) {
+            const slotGeom = new THREE.BoxGeometry(850, 2, 8);
+            slotGeom.translate(140, 0.5, sz);
+            scene.add(new THREE.Mesh(slotGeom, slotMat));
+        }
+
+        const gridHelper = new THREE.GridHelper(850, 42, 0x1d293a, 0x0d121b);
+        gridHelper.position.set(140, 1, 0);
+        scene.add(gridHelper);
+
+        const axesHelper = new THREE.AxesHelper(35);
+        axesHelper.position.set(0, CENTER_HEIGHT, 0);
+        scene.add(axesHelper);
+
+        function makeWoodTexture() {
+            const cvs = document.createElement('canvas');
+            cvs.width = 512; cvs.height = 512;
+            const ctx = cvs.getContext('2d');
+            ctx.fillStyle = '#b78351';
+            ctx.fillRect(0, 0, 512, 512);
+            ctx.fillStyle = '#875122';
+            for (let i = 0; i < 400; i++) {
+                ctx.globalAlpha = Math.random() * 0.3 + 0.05;
+                ctx.fillRect(0, Math.random() * 512, 512, Math.random() * 2 + 0.5);
+            }
+            const t = new THREE.CanvasTexture(cvs);
+            t.wrapS = THREE.RepeatWrapping;
+            t.wrapT = THREE.RepeatWrapping;
+            t.repeat.set(2, 4);
+            return t;
+        }
+
+        const woodMat = new THREE.MeshStandardMaterial({ map: makeWoodTexture(), roughness: 0.65, transparent: true, opacity: 0.9 });
+        const steelMat = new THREE.MeshStandardMaterial({ color: 0x93a1ad, metalness: 0.85, roughness: 0.25 });
+        const darkMat = new THREE.MeshStandardMaterial({ color: 0x161b24, metalness: 0.9, roughness: 0.35 });
+        const carbideMat = new THREE.MeshStandardMaterial({ color: 0xe0e6ed, metalness: 0.95, roughness: 0.15 });
+        const stlMat = new THREE.MeshStandardMaterial({ color: 0xb388ff, metalness: 0.25, roughness: 0.4, transparent: true, opacity: 0.9 });
+
+        const jawMat = new THREE.MeshStandardMaterial({
+            color: 0xd1d5db,
+            metalness: 0.55,
+            roughness: 0.25
+        });
+
+        const stationaryGroup = new THREE.Group();
+        const rotaryGroup = new THREE.Group();
+        const stlContainer = new THREE.Group();
+        const toolpathGroup = new THREE.Group();
+        const toolGroup = new THREE.Group();
+
+        rotaryGroup.position.set(0, CENTER_HEIGHT, 0);
+
+        scene.add(stationaryGroup);
+        scene.add(rotaryGroup);
+        scene.add(toolGroup);
+        rotaryGroup.add(stlContainer);
+        rotaryGroup.add(toolpathGroup);
+
+        let stockMesh = null;
+        let stockGeom = null;
+
+        const GRID_X = 48;
+        const GRID_A = 48;
+
+        function buildMachine3D() {
+            while (stationaryGroup.children.length > 0) stationaryGroup.remove(stationaryGroup.children[0]);
+            const toRemove = [];
+            rotaryGroup.children.forEach(c => { if (c !== stlContainer && c !== toolpathGroup) toRemove.push(c); });
+            toRemove.forEach(c => rotaryGroup.remove(c));
+
+            const stockDia = parseFloat(document.getElementById('stock-diameter').value) || 90;
+            const stockLen = parseFloat(document.getElementById('stock-length').value) || 220;
+            const r = stockDia / 2;
+
+            const isSquareShape = (document.getElementById('round-stock-shape').value === 'square');
+            const rawSquareSide = parseFloat(document.getElementById('round-raw-size').value) || 70.0;
+            const maxRadiusToCheck = isSquareShape ? (rawSquareSide * Math.SQRT2 / 2.0) : r;
+
+            const warnBox = document.getElementById('table-collision-warn');
+            if (maxRadiusToCheck * 2.0 > 130.0) {
+                warnBox.style.display = 'block';
+                warnBox.innerHTML = `🛑 <b>COLISÃO COM A MESA:</b> Raio máximo (${maxRadiusToCheck.toFixed(1)}mm) ultrapassa o centro de 65mm. O material colidirá com a mesa!`;
+            } else if (maxRadiusToCheck * 2.0 > 120.0) {
+                const folga = (CENTER_HEIGHT - maxRadiusToCheck).toFixed(1);
+                warnBox.style.display = 'block';
+                warnBox.innerHTML = `⚠ <b>PROXIMIDADE CRÍTICA:</b> Folga de apenas ${folga}mm em relação à mesa da máquina (Limite físico 65mm).`;
+            } else {
+                warnBox.style.display = 'none';
+            }
+
+            stockGeom = new THREE.CylinderGeometry(r, r, stockLen, GRID_A, GRID_X, false);
+            stockGeom.rotateZ(-Math.PI / 2);
+            stockGeom.translate(stockLen / 2, 0, 0);
+
+            const posArr = stockGeom.attributes.position.array;
+            if (isSquareShape) {
+                const halfSide = rawSquareSide / 2.0;
+                for (let i = 0; i < posArr.length; i += 3) {
+                    const y = posArr[i + 1];
+                    const z = posArr[i + 2];
+                    const curRad = Math.hypot(y, z);
+                    if (curRad > 1.0) {
+                        const ang = Math.atan2(z, y);
+                        const cosA = Math.abs(Math.cos(ang));
+                        const sinA = Math.abs(Math.sin(ang));
+                        const squareRad = halfSide / Math.max(cosA, sinA);
+                        const factor = squareRad / curRad;
+                        posArr[i + 1] = y * factor;
+                        posArr[i + 2] = z * factor;
+                    }
+                }
+                stockGeom.attributes.position.needsUpdate = true;
+                stockGeom.computeVertexNormals();
+            }
+
+            stockGeom.attributes.position.originalData = stockGeom.attributes.position.array.slice();
+            stockMesh = new THREE.Mesh(stockGeom, woodMat);
+            rotaryGroup.add(stockMesh);
+
+            // Placa Tecmaf 100mm no lado DIREITO
+            const chuckRadius = CHUCK_DIAMETER / 2.0;
+            const chuckThickness = 38.0;
+
+            const chuckGeom = new THREE.CylinderGeometry(chuckRadius, chuckRadius, chuckThickness, 40);
+            chuckGeom.rotateZ(-Math.PI / 2);
+            chuckGeom.translate(stockLen + chuckThickness / 2, 0, 0);
+            rotaryGroup.add(new THREE.Mesh(chuckGeom, darkMat));
+
+            const ringGeom = new THREE.RingGeometry(18, chuckRadius - 4, 32);
+            ringGeom.rotateY(-Math.PI / 2);
+            ringGeom.translate(stockLen + 0.1, 0, 0);
+            rotaryGroup.add(new THREE.Mesh(ringGeom, steelMat));
+
+            for (let i = 0; i < 4; i++) {
+                const jawGeom = new THREE.BoxGeometry(16, 14, 22);
+                const jaw = new THREE.Mesh(jawGeom, jawMat);
+                const angle = i * (Math.PI / 2);
+                const jawDist = Math.min(chuckRadius - 8, Math.max(16, r + 4));
+                jaw.position.set(stockLen - 4, Math.cos(angle) * jawDist, Math.sin(angle) * jawDist);
+                jaw.rotation.x = -angle;
+                rotaryGroup.add(jaw);
+            }
+
+            chuckLight.position.set(stockLen - 20, CENTER_HEIGHT + 80, 80);
+
+            // Cabeçote e Torre NEMA 34 à direita
+            const headBase = new THREE.BoxGeometry(65, CENTER_HEIGHT + 45, 130);
+            headBase.translate(stockLen + chuckThickness + 32, (CENTER_HEIGHT + 45) / 2, 0);
+            stationaryGroup.add(new THREE.Mesh(headBase, darkMat));
+
+            const spindleBoss = new THREE.CylinderGeometry(56, 56, 18, 36);
+            spindleBoss.rotateZ(-Math.PI / 2);
+            spindleBoss.translate(stockLen + chuckThickness + 9, CENTER_HEIGHT, 0);
+            stationaryGroup.add(new THREE.Mesh(spindleBoss, steelMat));
+
+            const motorTower = new THREE.Group();
+            motorTower.position.set(stockLen + chuckThickness + 32, CENTER_HEIGHT + 20, -92);
+
+            const beltCoverGeom = new THREE.BoxGeometry(50, 85, 48);
+            beltCoverGeom.translate(0, -10, 24);
+            motorTower.add(new THREE.Mesh(beltCoverGeom, darkMat));
+
+            const nema34Flange = new THREE.BoxGeometry(86, 86, 12);
+            nema34Flange.translate(0, 0, -6);
+            motorTower.add(new THREE.Mesh(nema34Flange, steelMat));
+
+            const nema34Body = new THREE.CylinderGeometry(41, 41, 80, 24);
+            nema34Body.rotateX(Math.PI / 2);
+            nema34Body.translate(0, 0, -52);
+            motorTower.add(new THREE.Mesh(nema34Body, darkMat));
+
+            stationaryGroup.add(motorTower);
+
+            // Contraponto à esquerda (X = 0)
+            const coneHeight = 28.0;
+            const coneRadius = 14.0;
+
+            const coneGeom = new THREE.ConeGeometry(coneRadius, coneHeight, 28);
+            coneGeom.rotateZ(-Math.PI / 2);
+            coneGeom.translate(-coneHeight / 2, 0, 0);
+            rotaryGroup.add(new THREE.Mesh(coneGeom, steelMat));
+
+            const quillLen = 50.0;
+            const quillRadius = 8.0;
+            const quillGeom = new THREE.CylinderGeometry(quillRadius, quillRadius, quillLen, 24);
+            quillGeom.rotateZ(-Math.PI / 2);
+            quillGeom.translate(-(coneHeight + quillLen / 2), CENTER_HEIGHT, 0);
+            stationaryGroup.add(new THREE.Mesh(quillGeom, steelMat));
+
+            const tailBody = new THREE.BoxGeometry(70, CENTER_HEIGHT + 25, 95);
+            tailBody.translate(-(coneHeight + quillLen + 25), (CENTER_HEIGHT + 25) / 2, 0);
+            stationaryGroup.add(new THREE.Mesh(tailBody, darkMat));
+
+            const leverGeom = new THREE.CylinderGeometry(3, 3, 40, 12);
+            leverGeom.rotateZ(-Math.PI / 4);
+            leverGeom.translate(-(coneHeight + quillLen + 15), CENTER_HEIGHT + 30, 30);
+            stationaryGroup.add(new THREE.Mesh(leverGeom, steelMat));
+
+            const barLen = stockLen + 240;
+            const barGeom = new THREE.CylinderGeometry(10, 10, barLen, 16);
+            barGeom.rotateZ(-Math.PI / 2);
+            barGeom.translate(stockLen / 2 - 20, 12, 35);
+            const bar1 = new THREE.Mesh(barGeom, steelMat);
+            const bar2 = bar1.clone();
+            bar2.position.z = -70;
+            stationaryGroup.add(bar1);
+            stationaryGroup.add(bar2);
+
+            buildTool3D();
+        }
+
+        /* =========================================================================
+           REMOÇÃO DINÂMICA DE MATERIAL (CARVING OTIMIZADO)
+           ========================================================================= */
+        function resetStockMesh() {
+            if (!stockGeom) return;
+            const posAttr = stockGeom.attributes.position;
+            const orig = posAttr.originalData;
+            for (let i = 0; i < posAttr.array.length; i++) {
+                posAttr.array[i] = orig[i];
+            }
+            posAttr.needsUpdate = true;
+            stockGeom.computeVertexNormals();
+            document.getElementById('hud-status').innerText = 'Tarugo Restaurado (Bruto)';
+        }
+
+        function carveMaterialAt(ptX, ptRadius, ptDeg) {
+            if (!stockGeom) return;
+            const stockLen = parseFloat(document.getElementById('stock-length').value) || 220;
+            if (ptX < 0 || ptX > stockLen) return;
+
+            const toolDia = parseFloat(document.getElementById('tool-diam').value) || 6.0;
+            const toolR = toolDia / 2.0;
+
+            const posAttr = stockGeom.attributes.position;
+            const arr = posAttr.array;
+            const orig = posAttr.originalData;
+            let modified = false;
+
+            const aRad = (ptDeg * Math.PI) / 180.0;
+
+            for (let i = 0; i < arr.length; i += 12) {
+                const vx = orig[i];
+                const dx = Math.abs(vx - ptX);
+
+                if (dx <= toolR) {
+                    const vy = orig[i + 1];
+                    const vz = orig[i + 2];
+                    const vRadiusOrig = Math.hypot(vy, vz);
+
+                    if (vRadiusOrig > 1.0) {
+                        const vAngle = Math.atan2(vz, vy);
+                        let diffAngle = Math.abs(vAngle - aRad) % (Math.PI * 2);
+                        if (diffAngle > Math.PI) diffAngle = Math.PI * 2 - diffAngle;
+
+                        if (diffAngle * vRadiusOrig <= toolR) {
+                            const curR = Math.hypot(arr[i + 1], arr[i + 2]);
+                            if (ptRadius < curR) {
+                                const factor = ptRadius / vRadiusOrig;
+                                arr[i + 1] = vy * factor;
+                                arr[i + 2] = vz * factor;
+                                modified = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (modified) {
+                posAttr.needsUpdate = true;
+            }
+        }
+
+        /* =========================================================================
+           PRESETS DE FERRAMENTA (TAPERED BALL NOSE R0.25)
+           ========================================================================= */
+        function onToolTypeChanged() {
+            const toolType = document.getElementById('tool-type').value;
+            const toolDiaInput = document.getElementById('tool-diam');
+            const pitchMmInput = document.getElementById('tool-pitch-mm');
+            const pitchPctInput = document.getElementById('tool-pitch-pct');
+
+            if (toolType === 'tapered') {
+                toolDiaInput.value = '6.0';
+                pitchMmInput.value = '0.10';
+                pitchPctInput.value = ((0.10 / 6.0) * 100).toFixed(1);
+            } else if (toolType === 'ball') {
+                toolDiaInput.value = '6.0';
+                pitchMmInput.value = '1.50';
+                pitchPctInput.value = '25.0';
+            } else {
+                toolDiaInput.value = '6.0';
+                pitchMmInput.value = '3.00';
+                pitchPctInput.value = '50.0';
+            }
+            buildTool3D();
+        }
+
+        function buildTool3D() {
+            while (toolGroup.children.length > 0) toolGroup.remove(toolGroup.children[0]);
+
+            const toolDia = parseFloat(document.getElementById('tool-diam').value) || 6.0;
+            const toolType = document.getElementById('tool-type').value;
+            const cutterLen = 32;
+
+            if (toolType === 'tapered') {
+                const tipR = 0.25;
+                const fluteH = 20.0;
+                const shankD = toolDia;
+
+                const sphereGeom = new THREE.SphereGeometry(tipR, 16, 12, 0, Math.PI * 2, 0, Math.PI);
+                sphereGeom.rotateX(Math.PI);
+                sphereGeom.translate(0, tipR, 0);
+                toolGroup.add(new THREE.Mesh(sphereGeom, carbideMat));
+
+                const coneGeom = new THREE.CylinderGeometry(shankD / 2, tipR, fluteH, 24);
+                coneGeom.translate(0, tipR + fluteH / 2, 0);
+                toolGroup.add(new THREE.Mesh(coneGeom, carbideMat));
+
+                const shankH = 15.0;
+                const shankGeom = new THREE.CylinderGeometry(shankD / 2, shankD / 2, shankH, 24);
+                shankGeom.translate(0, tipR + fluteH + shankH / 2, 0);
+                toolGroup.add(new THREE.Mesh(shankGeom, carbideMat));
+            } else if (toolType === 'ball') {
+                const cylH = Math.max(2, cutterLen - toolDia / 2);
+                const shaftGeom = new THREE.CylinderGeometry(toolDia / 2, toolDia / 2, cylH, 24);
+                shaftGeom.translate(0, toolDia / 2 + cylH / 2, 0);
+                toolGroup.add(new THREE.Mesh(shaftGeom, carbideMat));
+
+                const sphereGeom = new THREE.SphereGeometry(toolDia / 2, 24, 16, 0, Math.PI * 2, 0, Math.PI);
+                sphereGeom.rotateX(Math.PI);
+                sphereGeom.translate(0, toolDia / 2, 0);
+                toolGroup.add(new THREE.Mesh(sphereGeom, carbideMat));
+            } else {
+                const cutterGeom = new THREE.CylinderGeometry(toolDia / 2, toolDia / 2, cutterLen, 24);
+                cutterGeom.translate(0, cutterLen / 2, 0);
+                toolGroup.add(new THREE.Mesh(cutterGeom, carbideMat));
+            }
+
+            const colletGeom = new THREE.CylinderGeometry(14, 11, 22, 20);
+            colletGeom.translate(0, cutterLen + 11, 0);
+            toolGroup.add(new THREE.Mesh(colletGeom, darkMat));
+
+            const spindleGeom = new THREE.CylinderGeometry(28, 28, 55, 32);
+            spindleGeom.translate(0, cutterLen + 22 + 27.5, 0);
+            toolGroup.add(new THREE.Mesh(spindleGeom, steelMat));
+        }
+
+        function setCamView(v) {
+            const stockDia = parseFloat(document.getElementById('stock-diameter').value) || 90;
+            const stockLen = parseFloat(document.getElementById('stock-length').value) || 220;
+            const r = stockDia / 2;
+            const midX = stockLen * 0.5;
+
+            if (v === 'iso') {
+                camera.position.set(midX, CENTER_HEIGHT + r + 170, r + 240);
+                controls.target.set(midX, CENTER_HEIGHT, 0);
+            } else if (v === 'front') {
+                camera.position.set(midX, CENTER_HEIGHT, r + 330);
+                controls.target.set(midX, CENTER_HEIGHT, 0);
+            } else if (v === 'top') {
+                camera.position.set(midX, CENTER_HEIGHT + r + 360, 0.001);
+                controls.target.set(midX, CENTER_HEIGHT, 0);
+            }
+            controls.update();
+        }
+
+        let toolpathVisible = true;
+        function toggleToolpathVisibility() {
+            toolpathVisible = !toolpathVisible;
+            toolpathGroup.visible = toolpathVisible;
+            const btn = document.getElementById('btn-toggle-toolpath');
+            btn.style.color = toolpathVisible ? 'var(--accent-cyan)' : 'var(--text-muted)';
+        }
+
+        let invertA = false;
+        function toggleInvertA() {
+            invertA = !invertA;
+            const btn = document.getElementById('btn-toggle-inverta');
+            btn.innerText = invertA ? 'Invertido (-A)' : 'Normal (+A)';
+            btn.style.color = invertA ? 'var(--accent-amber)' : 'var(--text-main)';
+            generateGCode();
+        }
+
+        const toolDiaIn = document.getElementById('tool-diam');
+        const pitchMmIn = document.getElementById('tool-pitch-mm');
+        const pitchPctIn = document.getElementById('tool-pitch-pct');
+
+        pitchPctIn.addEventListener('input', () => {
+            const d = parseFloat(toolDiaIn.value) || 0;
+            const pct = parseFloat(pitchPctIn.value) || 0;
+            if (d > 0) pitchMmIn.value = ((d * pct) / 100).toFixed(2);
+        });
+
+        pitchMmIn.addEventListener('input', () => {
+            const d = parseFloat(toolDiaIn.value) || 0;
+            const mm = parseFloat(pitchMmIn.value) || 0;
+            if (d > 0) pitchPctIn.value = ((mm / d) * 100).toFixed(1);
+        });
+
+        toolDiaIn.addEventListener('input', () => {
+            const d = parseFloat(toolDiaIn.value) || 0;
+            const pct = parseFloat(pitchPctIn.value) || 0;
+            if (d > 0) pitchMmIn.value = ((d * pct) / 100).toFixed(2);
+            buildTool3D();
+        });
+
+        document.getElementById('stock-diameter').addEventListener('input', buildMachine3D);
+        document.getElementById('stock-length').addEventListener('input', buildMachine3D);
+
+        function setMode(mode) {
+            ['round', 'flute', 'spiral', 'cyl', 'stl'].forEach(m => {
+                document.getElementById('sec-' + m).style.display = (m === mode) ? 'flex' : 'none';
+                document.getElementById('tab-' + m).className = 'tab-btn' + ((m === mode) ? ' active' : '');
+            });
+            if (mode === 'round') document.getElementById('tab-round').className = 'tab-btn active';
+            if (mode === 'flute') document.getElementById('tab-flute').className = 'tab-btn active-amber';
+            if (mode === 'spiral') document.getElementById('tab-spiral').className = 'tab-btn active-green';
+            if (mode === 'cyl') document.getElementById('tab-cyl').className = 'tab-btn active';
+            if (mode === 'stl') document.getElementById('tab-stl').className = 'tab-btn active-purple';
+        }
+
+        function onStockShapeChange() {
+            const shape = document.getElementById('round-stock-shape').value;
+            const label = document.getElementById('round-size-label');
+            label.innerText = (shape === 'square') ? 'Lado do Bloco (mm):' : 'Diâmetro Bruto (mm):';
+            buildMachine3D();
+        }
+
+        /* =========================================================================
+           3. STL 3D: IMPORTAÇÃO E AUTOFIT
+           ========================================================================= */
+        let loadedSTL = null;
+
+        document.getElementById('stl-file-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('stl-name-label').innerText = file.name;
+            document.getElementById('hud-status').innerText = 'Carregando malha STL...';
+
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                try {
+                    const loader = new THREE.STLLoader();
+                    const geom = loader.parse(evt.target.result);
+                    geom.computeVertexNormals();
+                    geom.center();
+
+                    while (stlContainer.children.length > 0) stlContainer.remove(stlContainer.children[0]);
+
+                    loadedSTL = new THREE.Mesh(geom, stlMat);
+                    stlContainer.add(loadedSTL);
+
+                    document.getElementById('stl-config-card').style.opacity = '1';
+                    document.getElementById('stl-config-card').style.pointerEvents = 'auto';
+
+                    const tri = geom.attributes.position.count / 3;
+                    document.getElementById('stl-info-label').innerText = `${Math.round(tri).toLocaleString()} triângulos carregados`;
+
+                    autoFitSTL();
+                    document.getElementById('hud-status').innerText = 'STL Pronto para Usinagem 4D';
+                } catch (err) {
+                    alert('Erro ao carregar STL: ' + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        function autoFitSTL() {
+            if (!loadedSTL) return;
+            const stockLen = parseFloat(document.getElementById('stock-length').value) || 220;
+            const target = Math.round(stockLen * 0.75);
+            document.getElementById('stl-target-length').value = target;
+            document.getElementById('stl-pos-x').value = Math.round((stockLen - target) / 2);
+            updateSTLTransform();
+        }
+
+        function updateSTLTransform() {
+            if (!loadedSTL) return;
+
+            const targetL = parseFloat(document.getElementById('stl-target-length').value) || 120;
+            const posX = parseFloat(document.getElementById('stl-pos-x').value) || 20;
+            const rx = THREE.MathUtils.degToRad(parseFloat(document.getElementById('stl-rot-x').value) || 0);
+            const ry = THREE.MathUtils.degToRad(parseFloat(document.getElementById('stl-rot-y').value) || 0);
+            const rz = THREE.MathUtils.degToRad(parseFloat(document.getElementById('stl-rot-z').value) || 0);
+
+            rotaryGroup.rotation.x = 0;
+            loadedSTL.scale.set(1, 1, 1);
+            loadedSTL.position.set(0, 0, 0);
+            loadedSTL.rotation.set(rx, ry, rz);
+            loadedSTL.updateMatrixWorld(true);
+
+            const b1 = new THREE.Box3().setFromObject(loadedSTL);
+            const unscaledL = Math.max(0.001, b1.max.x - b1.min.x);
+            const scale = targetL / unscaledL;
+
+            loadedSTL.scale.set(scale, scale, scale);
+            loadedSTL.updateMatrixWorld(true);
+
+            const b2 = new THREE.Box3().setFromObject(loadedSTL);
+            const shiftX = posX - b2.min.x;
+            const shiftY = -((b2.min.y + b2.max.y) / 2);
+            const shiftZ = -((b2.min.z + b2.max.z) / 2);
+
+            loadedSTL.position.set(shiftX, shiftY, shiftZ);
+            loadedSTL.updateMatrixWorld(true);
+
+            const bFinal = new THREE.Box3().setFromObject(loadedSTL);
+            const rMax = Math.max(Math.abs(bFinal.min.y), Math.abs(bFinal.max.y), Math.abs(bFinal.min.z), Math.abs(bFinal.max.z));
+            const diaMax = rMax * 2;
+            const stockDia = parseFloat(document.getElementById('stock-diameter').value);
+
+            let alertHtml = '';
+            if (diaMax > 130.0) {
+                alertHtml = `<br><span style="color:var(--accent-red); font-weight:bold;">🛑 Diâmetro (${diaMax.toFixed(1)}mm) colide com a mesa Tecmaf!</span>`;
+            } else if (diaMax > stockDia) {
+                alertHtml = `<br><span style="color:var(--accent-red); font-weight:bold;">⚠ Diâmetro (${diaMax.toFixed(1)}mm) excede o tarugo (${stockDia}mm)!</span>`;
+            }
+
+            document.getElementById('stl-box-feedback').innerHTML =
+                `Extensão X: <b>[${bFinal.min.x.toFixed(1)} a ${bFinal.max.x.toFixed(1)}] mm</b><br>` +
+                `Comprimento: <b>${(bFinal.max.x - bFinal.min.x).toFixed(1)} mm</b> | Diâm. Máx: <b>${diaMax.toFixed(1)} mm</b>${alertHtml}`;
+        }
+
+        function autoFitStockToSTL() {
+            if (!loadedSTL) {
+                alert("Por favor, importe um arquivo STL primeiro.");
+                return;
+            }
+            updateSTLTransform();
+            rotaryGroup.rotation.x = 0;
+            loadedSTL.updateMatrixWorld(true);
+
+            const box = new THREE.Box3().setFromObject(loadedSTL);
+            const maxRadial = Math.max(
+                Math.abs(box.min.y), Math.abs(box.max.y),
+                Math.abs(box.min.z), Math.abs(box.max.z)
+            );
+            const stlMaxDia = maxRadial * 2;
+            const stlMaxX = box.max.x;
+
+            const newStockDia = Math.ceil(stlMaxDia + 10.0);
+            const newStockLen = Math.ceil(Math.max(stlMaxX + 20.0, (box.max.x - box.min.x) + 40.0));
+
+            document.getElementById('stock-diameter').value = newStockDia.toFixed(1);
+            document.getElementById('stock-length').value = newStockLen.toFixed(1);
+
+            buildMachine3D();
+            updateSTLTransform();
+
+            document.getElementById('hud-status').innerText = `Tarugo Redimensionado: Ø${newStockDia}mm x ${newStockLen}mm`;
+        }
+
+        ['stl-target-length', 'stl-pos-x', 'stl-rot-x', 'stl-rot-y', 'stl-rot-z'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateSTLTransform);
+        });
+
+        /* =========================================================================
+           4. CAM DE 4-EIXOS (ARREDONDAMENTO, FLUTING, ESPIRAIS, CILINDRO E STL)
+           ========================================================================= */
+        let computedPath = [];
+        let generatedGCode = "";
+
+        // Cálculo dinâmico do Z Seguro garantindo liberação das quinas de blocos quadrados
+        function getSafeZMachine(zSafe, stockDia, zeroZMode) {
+            const isSquare = (document.getElementById('round-stock-shape').value === 'square');
+            const rawSize = parseFloat(document.getElementById('round-raw-size').value) || 70.0;
+            const maxRad = isSquare ? (rawSize * Math.SQRT2 / 2.0) : (stockDia / 2.0);
+            return (zeroZMode === 'top') ? zSafe : (maxRad + zSafe);
+        }
+
+        function generateRoundingToolpath() {
+            const stockDia = parseFloat(document.getElementById('stock-diameter').value);
+            const rawSize = parseFloat(document.getElementById('round-raw-size').value);
+            const shape = document.getElementById('round-stock-shape').value;
+            const targetDia = parseFloat(document.getElementById('round-target-dia').value);
+            const cutLen = parseFloat(document.getElementById('round-length').value);
+            const ap = parseFloat(document.getElementById('round-ap').value);
+            const pitch = parseFloat(document.getElementById('tool-pitch-mm').value);
+            const method = document.getElementById('round-method').value;
+            const allowance = parseFloat(document.getElementById('round-allowance').value) || 0.0;
+            const zSafe = parseFloat(document.getElementById('z-safe').value);
+            const zeroZMode = document.getElementById('zero-z-mode').value;
+            const stockLen = parseFloat(document.getElementById('stock-length').value);
+
+            let startX = parseFloat(document.getElementById('round-start-x').value);
+            if (startX < 2.0) startX = 2.0;
+            let endX = Math.min(stockLen - 4.0, startX + cutLen);
+            const actualCutLen = Math.max(1.0, endX - startX);
+
+            const initialRadius = (shape === 'square') ? (rawSize * Math.SQRT2 / 2.0) : (rawSize / 2.0);
+            const finalRadius = (targetDia / 2.0) + allowance;
+
+            computedPath = [];
+            const zOff = (zeroZMode === 'top') ? -(stockDia / 2.0) : 0;
+            const safeZ = getSafeZMachine(zSafe, stockDia, zeroZMode);
+
+            computedPath.push({ x: startX, z: safeZ, a: 0, radius: initialRadius + zSafe, type: 'rapid' });
+
+            let curR = initialRadius;
+            let curA = 0;
+
+            if (method === 'radial') {
+                while (curR > finalRadius) {
+                    curR = Math.max(finalRadius, curR - ap);
+
+                    computedPath.push({ x: startX, z: safeZ, a: curA, radius: initialRadius + zSafe, type: 'rapid' });
+                    // Mergulho inicial suave
+                    computedPath.push({ x: startX, z: curR + zOff, a: curA, radius: curR, type: 'plunge' });
+
+                    const turns = actualCutLen / pitch;
+                    const degTotal = turns * 360;
+                    const steps = Math.ceil(turns * 45);
+                    const dx = actualCutLen / steps;
+                    const da = degTotal / steps;
+
+                    for (let s = 1; s <= steps; s++) {
+                        computedPath.push({
+                            x: startX + s * dx,
+                            z: curR + zOff,
+                            a: curA + s * da,
+                            radius: curR,
+                            type: 'cut'
+                        });
+                    }
+                    curA += degTotal;
+                    computedPath.push({ x: endX, z: safeZ, a: curA, radius: initialRadius + zSafe, type: 'rapid' });
+                }
+            } else if (method === 'raster' || method === 'optimized') {
+                const angleStep = 5.0;
+                const numPassesA = Math.round(360.0 / angleStep);
+
+                while (curR > finalRadius) {
+                    curR = Math.max(finalRadius, curR - ap);
+
+                    for (let p = 0; p < numPassesA; p++) {
+                        const passAngle = p * angleStep;
+
+                        if (method === 'optimized' && shape === 'square' && curR > (rawSize / 2.0)) {
+                            const cornerAngle = (passAngle % 90);
+                            const distToCorner = Math.min(cornerAngle, 90 - cornerAngle);
+                            if (distToCorner > 18) continue;
+                        }
+
+                        const dir = (p % 2 === 0);
+                        const fromX = dir ? startX : endX;
+                        const toX = dir ? endX : startX;
+
+                        computedPath.push({ x: fromX, z: safeZ, a: passAngle, radius: initialRadius + zSafe, type: 'rapid' });
+                        computedPath.push({ x: fromX, z: curR + zOff, a: passAngle, radius: curR, type: 'plunge' });
+                        computedPath.push({ x: toX, z: curR + zOff, a: passAngle, radius: curR, type: 'cut' });
+                        computedPath.push({ x: toX, z: safeZ, a: passAngle, radius: initialRadius + zSafe, type: 'rapid' });
+                    }
+                }
+            }
+
+            computedPath.push({ x: startX, z: safeZ, a: curA, radius: initialRadius + zSafe, type: 'rapid' });
+            postComputeToolpath('Arredondamento Concluído!');
+        }
+
+        function generateFlutingToolpath() {
+            const stockDia = parseFloat(document.getElementById('stock-diameter').value);
+            const stockLen = parseFloat(document.getElementById('stock-length').value);
+            const fluteCount = parseInt(document.getElementById('flute-count').value) || 8;
+            const fluteDepth = parseFloat(document.getElementById('flute-depth').value) || 3.5;
+            const offsetStart = parseFloat(document.getElementById('flute-offset-start').value) || 25.0;
+            const offsetEnd = parseFloat(document.getElementById('flute-offset-end').value) || 25.0;
+            const rampType = document.getElementById('flute-ramp-type').value;
+            const rampLen = parseFloat(document.getElementById('flute-ramp-len').value) || 15.0;
+            const coves = document.getElementById('flute-coves').value;
+            const zSafe = parseFloat(document.getElementById('z-safe').value);
+            const zeroZMode = document.getElementById('zero-z-mode').value;
+
+            const startX = Math.max(2.0, offsetStart);
+            const endX = Math.min(stockLen - 4.0, stockLen - offsetEnd);
+            const fluteLen = endX - startX;
+
+            if (fluteLen <= 5.0) {
+                alert("Offsets de início e fim muito grandes para o tarugo!");
+                return;
+            }
+
+            computedPath = [];
+            const rStock = stockDia / 2.0;
+            const rCut = Math.max(4.0, rStock - fluteDepth);
+            const zOff = (zeroZMode === 'top') ? -rStock : 0;
+            const safeZ = getSafeZMachine(zSafe, stockDia, zeroZMode);
+
+            computedPath.push({ x: startX, z: safeZ, a: 0, radius: rStock + zSafe, type: 'rapid' });
+
+            if (coves === 'both' || coves === 'start') {
+                computedPath.push({ x: startX, z: safeZ, a: 0, radius: rStock + zSafe, type: 'rapid' });
+                computedPath.push({ x: startX, z: rCut + zOff, a: 0, radius: rCut, type: 'plunge' });
+                for (let a = 10; a <= 360; a += 10) {
+                    computedPath.push({ x: startX, z: rCut + zOff, a: a, radius: rCut, type: 'cut' });
+                }
+                computedPath.push({ x: startX, z: safeZ, a: 360, radius: rStock + zSafe, type: 'rapid' });
+            }
+
+            const angleStep = 360.0 / fluteCount;
+            for (let i = 0; i < fluteCount; i++) {
+                const angle = i * angleStep;
+                computedPath.push({ x: startX, z: safeZ, a: angle, radius: rStock + zSafe, type: 'rapid' });
+
+                if (rampType === 'both') {
+                    computedPath.push({ x: startX, z: rStock + zOff, a: angle, radius: rStock, type: 'plunge' });
+                    computedPath.push({ x: startX + rampLen, z: rCut + zOff, a: angle, radius: rCut, type: 'cut' });
+                    computedPath.push({ x: endX - rampLen, z: rCut + zOff, a: angle, radius: rCut, type: 'cut' });
+                    computedPath.push({ x: endX, z: rStock + zOff, a: angle, radius: rStock, type: 'cut' });
+                } else if (rampType === 'start') {
+                    computedPath.push({ x: startX, z: rStock + zOff, a: angle, radius: rStock, type: 'plunge' });
+                    computedPath.push({ x: startX + rampLen, z: rCut + zOff, a: angle, radius: rCut, type: 'cut' });
+                    computedPath.push({ x: endX, z: rCut + zOff, a: angle, radius: rCut, type: 'cut' });
+                } else {
+                    computedPath.push({ x: startX, z: rCut + zOff, a: angle, radius: rCut, type: 'plunge' });
+                    computedPath.push({ x: endX, z: rCut + zOff, a: angle, radius: rCut, type: 'cut' });
+                }
+
+                computedPath.push({ x: endX, z: safeZ, a: angle, radius: rStock + zSafe, type: 'rapid' });
+            }
+
+            if (coves === 'both' || coves === 'end') {
+                computedPath.push({ x: endX, z: safeZ, a: 0, radius: rStock + zSafe, type: 'rapid' });
+                computedPath.push({ x: endX, z: rCut + zOff, a: 0, radius: rCut, type: 'plunge' });
+                for (let a = 10; a <= 360; a += 10) {
+                    computedPath.push({ x: endX, z: rCut + zOff, a: a, radius: rCut, type: 'cut' });
+                }
+                computedPath.push({ x: endX, z: safeZ, a: 360, radius: rStock + zSafe, type: 'rapid' });
+            }
+
+            postComputeToolpath('Canais Longitudinais Concluídos!');
+        }
+
+        function generateSpiralToolpath() {
+            const stockDia = parseFloat(document.getElementById('stock-diameter').value);
+            const stockLen = parseFloat(document.getElementById('stock-length').value);
+            const starts = parseInt(document.getElementById('spiral-starts').value) || 2;
+            const pitch = parseFloat(document.getElementById('spiral-pitch').value) || 80.0;
+            const dir = document.getElementById('spiral-dir').value;
+            const depth = parseFloat(document.getElementById('spiral-depth').value) || 4.0;
+            const ap = parseFloat(document.getElementById('spiral-ap').value) || 2.0;
+            const marginStart = parseFloat(document.getElementById('spiral-margin-start').value) || 20.0;
+            const marginEnd = parseFloat(document.getElementById('spiral-margin-end').value) || 20.0;
+            const zSafe = parseFloat(document.getElementById('z-safe').value);
+            const zeroZMode = document.getElementById('zero-z-mode').value;
+
+            const startX = Math.max(2.0, marginStart);
+            const endX = Math.min(stockLen - 4.0, stockLen - marginEnd);
+            const spiralLen = endX - startX;
+
+            if (spiralLen <= 5.0) {
+                alert("Margens muito grandes para o tarugo!");
+                return;
+            }
+
+            computedPath = [];
+            const rStock = stockDia / 2.0;
+            const zOff = (zeroZMode === 'top') ? -rStock : 0;
+            const safeZ = getSafeZMachine(zSafe, stockDia, zeroZMode);
+
+            const numRevolutions = spiralLen / pitch;
+            const totalDegrees = numRevolutions * 360.0 * (dir === 'right' ? 1.0 : -1.0);
+            const steps = Math.ceil(Math.abs(numRevolutions) * 60);
+            const dx = spiralLen / steps;
+            const da = totalDegrees / steps;
+
+            computedPath.push({ x: startX, z: safeZ, a: 0, radius: rStock + zSafe, type: 'rapid' });
+
+            let curDepth = 0;
+            while (curDepth < depth) {
+                curDepth = Math.min(depth, curDepth + ap);
+                const curR = rStock - curDepth;
+
+                for (let k = 0; k < starts; k++) {
+                    const startAngle = k * (360.0 / starts);
+
+                    computedPath.push({ x: startX, z: safeZ, a: startAngle, radius: rStock + zSafe, type: 'rapid' });
+                    computedPath.push({ x: startX, z: curR + zOff, a: startAngle, radius: curR, type: 'plunge' });
+
+                    for (let s = 1; s <= steps; s++) {
+                        computedPath.push({
+                            x: startX + s * dx,
+                            z: curR + zOff,
+                            a: startAngle + s * da,
+                            radius: curR,
+                            type: 'cut'
+                        });
+                    }
+
+                    computedPath.push({ x: endX, z: safeZ, a: startAngle + totalDegrees, radius: rStock + zSafe, type: 'rapid' });
+                }
+            }
+
+            postComputeToolpath('Cordões Salomônicos Concluídos!');
+        }
+
+        function generateCylToolpath() {
+            const stockDia = parseFloat(document.getElementById('stock-diameter').value);
+            const targetDia = parseFloat(document.getElementById('cyl-target-dia').value);
+            const cutLen = parseFloat(document.getElementById('cyl-length').value);
+            const ap = parseFloat(document.getElementById('cyl-ap').value);
+            const pitch = parseFloat(document.getElementById('tool-pitch-mm').value);
+            const taperDelta = parseFloat(document.getElementById('cyl-taper-delta').value) || 0.0;
+            const zSafe = parseFloat(document.getElementById('z-safe').value);
+            const zeroZMode = document.getElementById('zero-z-mode').value;
+            const stockLen = parseFloat(document.getElementById('stock-length').value);
+            const strategy = document.getElementById('cam-strategy').value;
+            const stockAllowance = (strategy === 'rough') ? 0.5 : 0.0;
+
+            if (targetDia >= stockDia) {
+                alert("O Diâmetro Final deve ser menor que o Diâmetro Bruto!");
+                return;
+            }
+
+            let startX = parseFloat(document.getElementById('cyl-start-x').value);
+            if (startX < 2.0) startX = 2.0;
+            let endX = Math.min(stockLen - 4.0, startX + cutLen);
+            const actualCutLen = Math.max(1.0, endX - startX);
+
+            computedPath = [];
+            const rInit = stockDia / 2;
+            const rFinal = (targetDia / 2) + stockAllowance;
+            const zOff = (zeroZMode === 'top') ? -rInit : 0;
+            const safeZ = getSafeZMachine(zSafe, stockDia, zeroZMode);
+
+            computedPath.push({ x: startX, z: safeZ, a: 0, radius: rInit + zSafe, type: 'rapid' });
+
+            let curR = rInit;
+            let curA = 0;
+
+            while (curR > rFinal) {
+                curR = Math.max(rFinal, curR - ap);
+
+                computedPath.push({ x: startX, z: safeZ, a: curA, radius: rInit + zSafe, type: 'rapid' });
+                computedPath.push({ x: startX, z: curR + zOff, a: curA, radius: curR, type: 'plunge' });
+
+                const turns = actualCutLen / pitch;
+                const degTotal = turns * 360;
+                const steps = Math.ceil(turns * 45);
+                const dx = actualCutLen / steps;
+                const da = degTotal / steps;
+
+                for (let s = 1; s <= steps; s++) {
+                    const ratio = s / steps;
+                    const dynamicRadius = curR + (ratio * taperDelta);
+                    computedPath.push({
+                        x: startX + s * dx,
+                        z: dynamicRadius + zOff,
+                        a: curA + s * da,
+                        radius: dynamicRadius,
+                        type: 'cut'
+                    });
+                }
+
+                curA += degTotal;
+                computedPath.push({ x: endX, z: safeZ, a: curA, radius: rInit + zSafe, type: 'rapid' });
+            }
+
+            computedPath.push({ x: startX, z: safeZ, a: curA, radius: rInit + zSafe, type: 'rapid' });
+            postComputeToolpath('Desbaste Cilíndrico 4D Concluído!');
+        }
+
+        async function generateSTLToolpath() {
+            if (!loadedSTL) return;
+            updateSTLTransform();
+
+            rotaryGroup.rotation.x = 0;
+            loadedSTL.updateMatrixWorld(true);
+            const box = new THREE.Box3().setFromObject(loadedSTL);
+
+            const toolDia = parseFloat(document.getElementById('tool-diam').value) || 6.0;
+            const toolType = document.getElementById('tool-type').value;
+            const toolR = (toolType === 'tapered') ? 0.25 : (toolDia / 2.0);
+            const pitch = Math.max(0.08, parseFloat(document.getElementById('tool-pitch-mm').value));
+            
+            let stepAngle = parseFloat(document.getElementById('stl-angle-step').value);
+            if (pitch < 0.20 && stepAngle < 3.0) stepAngle = 3.0;
+
+            const zSafe = parseFloat(document.getElementById('z-safe').value);
+            const stockDia = parseFloat(document.getElementById('stock-diameter').value);
+            const stockLen = parseFloat(document.getElementById('stock-length').value);
+            const zeroZMode = document.getElementById('zero-z-mode').value;
+            const coreDia = parseFloat(document.getElementById('stl-core-dia').value);
+            const strategy = document.getElementById('cam-strategy').value;
+            const stockAllowance = (strategy === 'rough') ? 0.5 : 0.0;
+
+            const rInit = stockDia / 2;
+            const rCore = (coreDia / 2) + stockAllowance;
+            const zOff = (zeroZMode === 'top') ? -rInit : 0;
+            const safeZ = getSafeZMachine(zSafe, stockDia, zeroZMode);
+
+            const scanStartX = Math.max(3.0, box.min.x - toolR);
+            const scanEndX = Math.min(stockLen - 4.0, box.max.x + toolR);
+            const totalDist = Math.max(1.0, scanEndX - scanStartX);
+
+            computedPath = [];
+            const turns = totalDist / pitch;
+            const degTotal = turns * 360.0;
+            const stepsPerTurn = Math.round(360.0 / stepAngle);
+            const totalPts = Math.min(80000, Math.round(turns * stepsPerTurn));
+
+            const dx = totalDist / totalPts;
+            const da = degTotal / totalPts;
+
+            const rayR = rInit + 20.0;
+            const raycaster = new THREE.Raycaster();
+            const origin = new THREE.Vector3();
+            const dir = new THREE.Vector3();
+
+            const pWrap = document.getElementById('stl-progress-wrap');
+            const pFill = document.getElementById('stl-progress-fill');
+            pWrap.style.display = 'block';
+            pFill.style.width = '0%';
+
+            computedPath.push({ x: scanStartX, z: safeZ, a: 0, radius: rInit + zSafe, type: 'rapid' });
+
+            const CHUNK = 500;
+
+            for (let i = 0; i <= totalPts; i++) {
+                const ptX = scanStartX + i * dx;
+                const ptA = i * da;
+                const rad = (ptA * Math.PI) / 180.0;
+
+                origin.set(ptX, rayR * Math.cos(rad), rayR * Math.sin(rad));
+                dir.set(0, -Math.cos(rad), -Math.sin(rad));
+                raycaster.set(origin, dir);
+
+                const hits = raycaster.intersectObject(loadedSTL, false);
+                let cutR = rCore;
+
+                if (hits.length > 0) {
+                    const hitPt = hits[0].point;
+                    let sampledR = Math.hypot(hitPt.y, hitPt.z);
+
+                    if (toolType === 'ball' || toolType === 'tapered') {
+                        const normal = hits[0].face.normal;
+                        const inclination = Math.abs(normal.x);
+                        const rOffset = (toolType === 'tapered') ? 0.25 : toolR;
+                        cutR = Math.max(rCore, sampledR + rOffset * (1 - Math.cos(Math.asin(Math.min(0.99, inclination)))) + stockAllowance);
+                    } else {
+                        cutR = Math.max(rCore, sampledR + stockAllowance);
+                    }
+                }
+
+                computedPath.push({
+                    x: ptX,
+                    z: cutR + zOff,
+                    a: ptA,
+                    radius: cutR,
+                    type: (i === 0) ? 'plunge' : 'cut'
+                });
+
+                if (i % CHUNK === 0 || i === totalPts) {
+                    const pct = Math.round((i / totalPts) * 100);
+                    pFill.style.width = pct + '%';
+                    document.getElementById('hud-status').innerText = `Raycasting 4D: ${pct}%`;
+                    await new Promise(r => setTimeout(r, 0));
+                }
+            }
+
+            const last = computedPath[computedPath.length - 1];
+            computedPath.push({ x: last.x, z: safeZ, a: last.a, radius: rInit + zSafe, type: 'rapid' });
+            computedPath.push({ x: scanStartX, z: safeZ, a: last.a, radius: rInit + zSafe, type: 'rapid' });
+
+            pWrap.style.display = 'none';
+            postComputeToolpath('Relevo STL Concluído!');
+        }
+
+        function postComputeToolpath(statusMsg) {
+            resetStockMesh();
+            toolpathGroup.visible = true;
+            toolpathVisible = true;
+            document.getElementById('btn-toggle-toolpath').style.color = 'var(--accent-cyan)';
+            drawPath3D();
+            generateGCode();
+            initSimulation();
+            document.getElementById('hud-status').innerText = statusMsg;
+        }
+
+        /* =========================================================================
+           5. RENDERIZAÇÃO 3D DO PERCURSO
+           ========================================================================= */
+        function drawPath3D() {
+            while (toolpathGroup.children.length > 0) toolpathGroup.remove(toolpathGroup.children[0]);
+            if (computedPath.length < 2) return;
+
+            const cutPts = [];
+            const rapidPts = [];
+
+            for (let i = 0; i < computedPath.length - 1; i++) {
+                const p1 = computedPath[i];
+                const p2 = computedPath[i + 1];
+
+                const rad1 = (p1.a * Math.PI) / 180;
+                const x1 = p1.x;
+                const y1 = p1.radius * Math.cos(rad1);
+                const z1 = p1.radius * Math.sin(rad1);
+
+                const rad2 = (p2.a * Math.PI) / 180;
+                const x2 = p2.x;
+                const y2 = p2.radius * Math.cos(rad2);
+                const z2 = p2.radius * Math.sin(rad2);
+
+                if (p2.type === 'rapid') {
+                    rapidPts.push(x1, y1, z1, x2, y2, z2);
+                } else {
+                    cutPts.push(x1, y1, z1, x2, y2, z2);
+                }
+            }
+
+            if (cutPts.length > 0) {
+                const g = new THREE.BufferGeometry();
+                g.setAttribute('position', new THREE.Float32BufferAttribute(cutPts, 3));
+                toolpathGroup.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0x00e5ff })));
+            }
+
+            if (rapidPts.length > 0) {
+                const g = new THREE.BufferGeometry();
+                g.setAttribute('position', new THREE.Float32BufferAttribute(rapidPts, 3));
+                toolpathGroup.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0xff334b, transparent: true, opacity: 0.7 })));
+            }
+        }
+
+        /* =========================================================================
+           6. PÓS-PROCESSADOR MACH3 (COM CLAMPING DE G93, POLARIDADE X & DWELL M05)
+           ========================================================================= */
+        function generateGCode() {
+            if (computedPath.length === 0) return;
+
+            const feedMode = document.getElementById('feed-mode').value;
+            const axis = document.getElementById('rotary-axis-letter').value;
+            const feedCut = parseFloat(document.getElementById('feed-cut').value);
+            const feedPlunge = parseFloat(document.getElementById('feed-plunge').value);
+            const rpm = document.getElementById('spindle-rpm').value;
+            const stockDia = parseFloat(document.getElementById('stock-diameter').value);
+            const stockLen = parseFloat(document.getElementById('stock-length').value);
+            const zSafe = parseFloat(document.getElementById('z-safe').value);
+            const zeroZMode = document.getElementById('zero-z-mode').value;
+            const zeroXMode = document.getElementById('zero-x-mode').value;
+            const xPolarity = document.getElementById('x-polarity').value; // 'neg' (padrão) ou 'pos'
+            const toolType = document.getElementById('tool-type').value;
+            const strategy = document.getElementById('cam-strategy').value;
+
+            const machineZSafe = getSafeZMachine(zSafe, stockDia, zeroZMode);
+
+            // Mapeamento dinâmico de Zero X com controle de polaridade CNC
+            let xOffset = 0;
+            if (zeroXMode === 'chuck') {
+                xOffset = (xPolarity === 'neg') ? -stockLen : 0;
+            } else if (zeroXMode === 'center') {
+                xOffset = -(stockLen / 2.0);
+            } else {
+                xOffset = (xPolarity === 'neg') ? 0 : 0;
+            }
+
+            const aSign = invertA ? -1.0 : 1.0;
+
+            const lines = [];
+            const d = new Date().toLocaleString();
+
+            let totalCutDist3D = 0;
+            let totalRapidDist = 0;
+            let totalEstMinutes = 0;
+
+            lines.push(`(================================================)`);
+            lines.push(`( ROTARY-CAM 4D PRO v3.5.0 - TECMAF & RNR USB )`);
+            lines.push(`( GERADO EM: ${d} )`);
+            lines.push(`( FERRAMENTA: ${toolType.toUpperCase()} | ESTRATEGIA: ${strategy.toUpperCase()} )`);
+            lines.push(`( MODO AVANCO: ${feedMode} 4D | EIXO ROTATIVO: ${axis}${invertA ? ' INVERTIDO' : ''} )`);
+            lines.push(`( ZERO X: ${zeroXMode.toUpperCase()} [POLARIDADE: ${xPolarity.toUpperCase()}] )`);
+            lines.push(`( ZERO Z: ${zeroZMode.toUpperCase()} | BUFFER RNR: G64 CLAMPED )`);
+            lines.push(`(================================================)`);
+            lines.push(`G21          (Sistema Metrico mm)`);
+            lines.push(`G90          (Coordenadas Absolutas)`);
+            lines.push(`G64 P0.02 Q0.01 (Trajetoria Continua - Otimizacao Buffer RnR)`);
+            lines.push(`G40 G49      (Cancela Compensacoes de Raio e Altura)`);
+            lines.push(`G94          (Modo Convencional para Ciclo de Seguranca)`);
+            lines.push(``);
+            lines.push(`( --- CICLO DE SEGURANCA TECMAF / WEG CFW300 --- )`);
+            lines.push(`G00 Z${machineZSafe.toFixed(3)} (1. Subida para Z de Seguranca)`);
+            lines.push(`G00 X0.000 ${axis}0.000 (2. Alinhamento inicial X0 A0)`);
+            lines.push(`M03 S${rpm}     (3. Ligar Spindle Tecmaf 24000 RPM)`);
+            lines.push(`G04 P2.0     (4. Dwell 2.0s para estabilizacao CFW300 / RnR)`);
+            lines.push(`${feedMode}          (5. Ativa modo de avanco interpolado G93/G94)`);
+            lines.push(``);
+
+            totalEstMinutes += (2.0 / 60.0);
+
+            let firstCutIndex = 0;
+            for (let i = 0; i < computedPath.length; i++) {
+                if (computedPath[i].type !== 'rapid') {
+                    firstCutIndex = i;
+                    break;
+                }
+            }
+
+            let prev = computedPath[firstCutIndex] || computedPath[0];
+            const startMachX = prev.x + xOffset;
+            const startMachA = prev.a * aSign;
+
+            lines.push(`( --- MERGULHO CONTROLADO INICIAL --- )`);
+            lines.push(`G00 X${startMachX.toFixed(3)} ${axis}${startMachA.toFixed(3)}`);
+            lines.push(`G01 Z${prev.z.toFixed(3)} F${feedPlunge.toFixed(1)}`);
+
+            totalEstMinutes += (Math.abs(machineZSafe - prev.z) / feedPlunge);
+
+            for (let i = firstCutIndex + 1; i < computedPath.length; i++) {
+                const pt = computedPath[i];
+                const machX = pt.x + xOffset;
+                const machA = pt.a * aSign;
+                const prevMachX = prev.x + xOffset;
+
+                const dx = machX - prevMachX;
+                const dz = pt.z - prev.z;
+                const da = Math.abs(pt.a - prev.a);
+
+                const avgR = ((pt.radius || (stockDia / 2)) + (prev.radius || (stockDia / 2))) / 2.0;
+                const arcLen = (da * Math.PI / 180.0) * avgR;
+                const dist3D = Math.sqrt(dx * dx + dz * dz + arcLen * arcLen);
+
+                if (pt.type === 'rapid') {
+                    lines.push(`G00 X${machX.toFixed(3)} Z${pt.z.toFixed(3)} ${axis}${machA.toFixed(3)}`);
+                    totalRapidDist += dist3D;
+                    totalEstMinutes += (dist3D / 3000.0);
+                } else {
+                    let feedStr = '';
+                    const vel = (pt.type === 'plunge') ? feedPlunge : feedCut;
+
+                    if (feedMode === 'G93') {
+                        if (dist3D > 0.0001) {
+                            const timeMin = dist3D / vel;
+                            let fG93 = 1.0 / timeMin;
+
+                            // Clamping industrial de segurança para proteger o buffer FIFO da placa USB RnR
+                            if (fG93 > 4500.0) fG93 = 4500.0;
+                            if (fG93 < 5.0) fG93 = 5.0;
+
+                            feedStr = ` F${fG93.toFixed(2)}`;
+                            totalEstMinutes += timeMin;
+                        } else {
+                            feedStr = ` F100.00`;
+                        }
+                    } else {
+                        feedStr = ` F${vel.toFixed(1)}`;
+                        if (dist3D > 0.0001) totalEstMinutes += (dist3D / vel);
+                    }
+
+                    totalCutDist3D += dist3D;
+                    lines.push(`G01 X${machX.toFixed(3)} Z${pt.z.toFixed(3)} ${axis}${machA.toFixed(3)}${feedStr}`);
+                }
+                prev = pt;
+            }
+
+            lines.push(``);
+            lines.push(`( --- ENCERRAMENTO SEGURO DO PROGRAMA --- )`);
+            lines.push(`G94          (Restaura avanco convencional mm/min)`);
+            lines.push(`G00 Z${machineZSafe.toFixed(3)} (Retracao Segura Z)`);
+            lines.push(`M05          (Desliga Spindle Tecmaf)`);
+            lines.push(`G04 P3.0     (Pausa de 3s para parada completa do motor antes de home)`);
+            lines.push(`G00 X0.000 ${axis}0.000 (Retorno a origem X0 A0)`);
+            lines.push(`M30          (Fim de Programa e Reset RnR)`);
+
+            generatedGCode = lines.join('\r\n');
+            document.getElementById('gcode-text').textContent = generatedGCode;
+
+            const finalMinutes = totalEstMinutes * 1.15;
+            const totalSec = Math.round(finalMinutes * 60);
+            const hrs = Math.floor(totalSec / 3600);
+            const mins = Math.floor((totalSec % 3600) / 60);
+            const secs = totalSec % 60;
+
+            const pad = (n) => String(n).padStart(2, '0');
+            document.getElementById('est-time-val').innerText = `${pad(hrs)}h ${pad(mins)}m ${pad(secs)}s`;
+            document.getElementById('est-dist-val').innerText = `${totalCutDist3D.toFixed(1)} mm`;
+        }
+
+        function downloadTAP() {
+            if (!generatedGCode) generateGCode();
+            const blob = new Blob([generatedGCode], { type: 'text/plain;charset=utf-8' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `rotary_tecmaf4d_${Date.now()}.tap`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }
+
+        function downloadSetupSheet() {
+            const stockDia = document.getElementById('stock-diameter').value;
+            const stockLen = document.getElementById('stock-length').value;
+            const toolType = document.getElementById('tool-type').value;
+            const toolDia = document.getElementById('tool-diam').value;
+            const stepover = document.getElementById('tool-pitch-mm').value;
+            const feedCut = document.getElementById('feed-cut').value;
+            const spindleRpm = document.getElementById('spindle-rpm').value;
+            const zeroZ = document.getElementById('zero-z-mode').value;
+            const zeroX = document.getElementById('zero-x-mode').value;
+            const xPol = document.getElementById('x-polarity').value;
+            const estTime = document.getElementById('est-time-val').innerText;
+            const estDist = document.getElementById('est-dist-val').innerText;
+
+            let report = [];
+            report.push(`========================================================`);
+            report.push(`  ROTARY-CAM 4D PRO v3.5.0 - FICHA DE SETUP DE OPERACAO `);
+            report.push(`  GERADO EM: ${new Date().toLocaleString()}`);
+            report.push(`========================================================\n`);
+            report.push(`[MÁQUINA & 4º EIXO]`);
+            report.push(`- Quarto Eixo: Tecmaf TMA.4EX.100 (Redução 1:3)`);
+            report.push(`- Altura de Centro: 65.0 mm`);
+            report.push(`- Placa: 100mm 4 Castanhas (Lado Direito)`);
+            report.push(`- Contraponto: Manga Ø16mm (Lado Esquerdo)`);
+            report.push(`- Controladora: RnR EcoMotion USB Mach3\n`);
+            report.push(`[MATERIAL BRUTO]`);
+            report.push(`- Diâmetro / Lado: Ø${stockDia} mm`);
+            report.push(`- Comprimento Total: ${stockLen} mm\n`);
+            report.push(`[ZERAMENTO & SISTEMA DE COORDENADAS]`);
+            report.push(`- Posição Zero Z: ${zeroZ.toUpperCase()}`);
+            report.push(`- Referência Zero X: ${zeroX.toUpperCase()} (Polaridade: ${xPol.toUpperCase()})`);
+            report.push(`- Eixo Rotativo: A (Invertido: ${invertA ? 'SIM' : 'NÃO'})\n`);
+            report.push(`[FERRAMENTA & PARÂMETROS DE CORTE]`);
+            report.push(`- Ferramenta: ${toolType.toUpperCase()}`);
+            report.push(`- Diâmetro Haste: ${toolDia} mm`);
+            report.push(`- Passo Lateral: ${stepover} mm`);
+            report.push(`- Spindle: ${spindleRpm} RPM (Inversor WEG CFW300)`);
+            report.push(`- Avanço de Corte: ${feedCut} mm/min\n`);
+            report.push(`[ESTIMATIVAS DE PRODUÇÃO]`);
+            report.push(`- Tempo Estimado: ${estTime}`);
+            report.push(`- Percurso de Corte 3D: ${estDist}\n`);
+            report.push(`========================================================`);
+
+            const blob = new Blob([report.join('\r\n')], { type: 'text/plain;charset=utf-8' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `setup_sheet_${Date.now()}.txt`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }
+
+        /* =========================================================================
+           7. SIMULAÇÃO 4D, CARVING & TIMELINE
+           ========================================================================= */
+        let simRunning = false;
+        let simIndex = 0;
+        const timeline = document.getElementById('sim-timeline');
+
+        function initSimulation() {
+            simIndex = 0;
+            timeline.value = 0;
+            resetStockMesh();
+            if (computedPath.length > 0) {
+                updateSimState(0);
+            }
+        }
+
+        function toggleSimulation() {
+            if (computedPath.length === 0) return;
+            simRunning = !simRunning;
+            const btn = document.getElementById('btn-sim-play');
+            if (simRunning) {
+                btn.innerText = '⏸ Pausar';
+                btn.style.color = 'var(--accent-amber)';
+                document.getElementById('hud-status').innerText = 'Simulação Ativa';
+                if (!toolpathVisible) {
+                    toolpathGroup.visible = true;
+                    toolpathVisible = true;
+                    document.getElementById('btn-toggle-toolpath').style.color = 'var(--accent-cyan)';
+                }
+            } else {
+                btn.innerText = '▶ Simular';
+                btn.style.color = 'var(--accent-cyan)';
+                document.getElementById('hud-status').innerText = 'Pausado';
+            }
+        }
+
+        function resetSimulation() {
+            simRunning = false;
+            document.getElementById('btn-sim-play').innerText = '▶ Simular';
+            document.getElementById('btn-sim-play').style.color = 'var(--accent-cyan)';
+            initSimulation();
+        }
+
+        let isSeeking = false;
+        timeline.addEventListener('input', () => {
+            if (computedPath.length === 0 || isSeeking) return;
+            isSeeking = true;
+
+            requestAnimationFrame(() => {
+                simRunning = false;
+                document.getElementById('btn-sim-play').innerText = '▶ Simular';
+                document.getElementById('btn-sim-play').style.color = 'var(--accent-cyan)';
+
+                const pct = parseFloat(timeline.value) / 100;
+                const targetIdx = Math.min(computedPath.length - 1, Math.floor(pct * computedPath.length));
+
+                if (targetIdx < simIndex) {
+                    resetStockMesh();
+                    for (let k = 0; k <= targetIdx; k += 8) {
+                        const p = computedPath[k];
+                        if (p && p.type !== 'rapid') carveMaterialAt(p.x, p.radius, p.a);
+                    }
+                } else {
+                    for (let k = simIndex; k <= targetIdx; k += 8) {
+                        const p = computedPath[k];
+                        if (p && p.type !== 'rapid') carveMaterialAt(p.x, p.radius, p.a);
+                    }
+                }
+
+                simIndex = targetIdx;
+                updateSimState(simIndex);
+                isSeeking = false;
+            });
+        });
+
+        function updateSimState(idx) {
+            const pt = computedPath[idx];
+            if (!pt) return;
+
+            const rad = (pt.a * Math.PI) / 180.0;
+            rotaryGroup.rotation.x = -rad;
+            toolGroup.position.set(pt.x, CENTER_HEIGHT + pt.radius, 0);
+
+            if (pt.type !== 'rapid') {
+                carveMaterialAt(pt.x, pt.radius, pt.a);
+            }
+
+            document.getElementById('hud-coords').innerText =
+                `X: ${pt.x.toFixed(2)} | Z: ${pt.z.toFixed(2)} | A: ${(pt.a % 360).toFixed(1)}°`;
+
+            if (idx >= computedPath.length - 1) {
+                toolpathGroup.visible = false;
+                toolpathVisible = false;
+                document.getElementById('btn-toggle-toolpath').style.color = 'var(--text-muted)';
+                document.getElementById('hud-status').innerText = '✅ Usinagem Concluída (Peça Limpa)';
+            }
+        }
+
+        let isWire = false;
+        function toggleWireframe() {
+            isWire = !isWire;
+            woodMat.wireframe = isWire;
+            steelMat.wireframe = isWire;
+            darkMat.wireframe = isWire;
+            jawMat.wireframe = isWire;
+            tableMat.wireframe = isWire;
+            if (loadedSTL) loadedSTL.material.wireframe = isWire;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (simRunning && computedPath.length > 0) {
+                const speed = parseInt(document.getElementById('sim-speed').value) || 3;
+                simIndex = (simIndex + speed);
+
+                if (simIndex >= computedPath.length - 1) {
+                    simIndex = computedPath.length - 1;
+                    timeline.value = 100;
+                    updateSimState(simIndex);
+                    simRunning = false;
+                    document.getElementById('btn-sim-play').innerText = '▶ Simular';
+                    document.getElementById('btn-sim-play').style.color = 'var(--accent-cyan)';
+                } else {
+                    timeline.value = ((simIndex / (computedPath.length - 1)) * 100).toFixed(1);
+                    updateSimState(simIndex);
+                }
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+        });
+
+        // Inicialização industrial estável
+        buildMachine3D();
+        setCamView('iso');
+        onToolTypeChanged();
+        generateRoundingToolpath();
+        animate();
+    </script>
+</body>
+</html>
